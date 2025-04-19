@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { MapPin, Utensils, CalendarDays, Info, Star } from 'lucide-react'; // アイコンをインポート
+import { MapPin, Utensils, CalendarDays, Info, } from 'lucide-react'; // アイコンをインポート
 
 import { Badge } from '@/components/ui/badge';
 import {
