@@ -17,6 +17,7 @@ export interface Shop {
 }
 
 // 画像プレースホルダーURL生成関数
+function generatePlaceholderImage(seed: string): string {
   // via.placeholder.com を使用 (幅x高さ/背景色/文字色?text=表示文字)
   // 16:9のアスペクト比 (例: 480x270)
   const width = 480;
