@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Search, X } from 'lucide-react';
-import { useDebouncedCallback } from 'use-debounce';
+// import { useDebouncedCallback } from 'use-debounce'; // 不要なインポートを削除
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,11 +64,13 @@ export function FilterControls({ genres: availableGenres }: FilterControlsProps)
 
   // const [genres, setGenres] = React.useState<string[]>([]); // propsで受け取るため不要
   const [isPending, startTransition] = React.useTransition(); // URL更新時のトランジション用
+  const initialKeyword = searchParams.get('keyword') || ''; // 先に定義
+  const [keyword, setKeyword] = React.useState(initialKeyword); // 検索キーワード用のstate
 
   // URLから初期値を取得
   const initialArea = searchParams.get('area') || 'all';
   const initialGenre = searchParams.get('genre') || 'all';
-  const initialKeyword = searchParams.get('keyword') || '';
+  // const initialKeyword = searchParams.get('keyword') || ''; // 上に移動
   const initialShowTakemachelin = searchParams.get('showTakemachelin') !== '0'; // '0'以外はtrue
 
   // URL更新関数
@@ -97,10 +99,23 @@ export function FilterControls({ genres: availableGenres }: FilterControlsProps)
     [searchParams, pathname, replace]
   );
 
-  // デバウンスされた検索処理
-  const handleSearch = useDebouncedCallback((term: string) => {
-    updateSearchParams({ keyword: term });
-  }, 300); // 300msのデバウンス
+  // デバウンスされた検索処理は不要なので削除
+  // const handleSearch = useDebouncedCallback((term: string) => {
+  //   updateSearchParams({ keyword: term });
+  // }, 500);
+
+  // Enterキー押下時の処理
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      // 日本語入力中のEnterキー操作を無視する
+      if (event.nativeEvent.isComposing) {
+        return;
+      }
+      event.preventDefault(); // デフォルトのフォーム送信などを防ぐ
+      updateSearchParams({ keyword: keyword });
+    }
+  };
+
 
   // リセット処理
   const handleReset = () => {
@@ -110,6 +125,7 @@ export function FilterControls({ genres: availableGenres }: FilterControlsProps)
     params.delete('keyword');
     params.delete('showTakemachelin');
     params.delete('page'); // ページネーションもリセット
+    setKeyword(''); // 検索キーワードのstateもリセット
     startTransition(() => {
       replace(`${pathname}?${params.toString()}`);
     });
@@ -208,8 +224,9 @@ export function FilterControls({ genres: availableGenres }: FilterControlsProps)
           type="search"
           placeholder="店舗名、最寄り駅名..."
           className="w-full pl-8"
-          defaultValue={initialKeyword} // defaultValueを使用
-          onChange={(e) => handleSearch(e.target.value)} // デバウンスされたハンドラを使用
+          value={keyword} // valueをstateにバインド
+          onChange={(e) => setKeyword(e.target.value)} // stateを更新
+          onKeyDown={handleKeyDown} // Enterキーのハンドラを追加
           disabled={isPending}
         />
       </div>

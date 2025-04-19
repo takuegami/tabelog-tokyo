@@ -3,7 +3,14 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { MapPin, Utensils, CalendarDays, Info, } from 'lucide-react'; // アイコンをインポート
+import { MapPin, Utensils, CalendarDays, Info } from 'lucide-react'; // アイコンをインポート
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel'; // Carouselコンポーネントをインポート
 
 import { Badge } from '@/components/ui/badge';
 import {
@@ -44,29 +51,60 @@ export function ShopCard({ shop, index }: ShopCardProps) {
       custom={index} // staggerの遅延時間をカスタム値として渡す
       whileHover={{ y: -4, transition: { duration: 0.15 } }} // ホバーアニメーション
     >
-      <Card className="h-full flex flex-col overflow-hidden transition-shadow hover:shadow-md">
+      <Card className="h-full flex flex-col overflow-hidden transition-shadow hover:shadow-md group p-0"> {/* p-0を追加してパディングを削除 */}
+        {/* 画像カルーセル (shop.imagesが存在し、空でない場合のみ表示) - Linkの外に移動 */}
+        {shop.images && shop.images.length > 0 ? (
+          <Carousel
+              opts={{
+                align: 'start',
+                loop: true, // ループ表示を有効化
+              }}
+              className="w-full"
+            >
+              <CarouselContent>
+                {shop.images.map((imageSrc, imgIndex) => (
+                  <CarouselItem key={imgIndex}>
+                    <div className="relative aspect-[16/9] w-full overflow-hidden">
+                      <Image
+                        src={imageSrc}
+                        alt={`${shop.name} 画像 ${imgIndex + 1}`}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        className="object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
+                        priority={index < 3 && imgIndex === 0} // 最初のカードの最初の画像のみ優先読み込み
+                      />
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              {/* ナビゲーションボタン (画像が2枚以上の場合のみ表示) */}
+              {shop.images.length > 1 && (
+                <>
+                  <CarouselPrevious
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    onPointerDown={(e) => e.stopPropagation()} // onPointerDownでイベント伝播を停止
+                  />
+                  <CarouselNext
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    onPointerDown={(e) => e.stopPropagation()} // onPointerDownでイベント伝播を停止
+                  />
+                </>
+              )}
+            </Carousel>
+          ) : null}
+
+          {/* 既存の単一画像表示ロジックは削除 */}
+          {/* {shop.image ? ( ... ) : null} */}
+
+        {/* カードのテキスト部分をLinkで囲む */}
         <Link
           href={shop.url || '#'}
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`${shop.name}の詳細を見る`}
-          className="flex flex-col h-full"
+          className="flex flex-col flex-grow p-0" // paddingを削除し、flex-growを追加
         >
-          {/* 画像 (shop.imageが存在する場合のみ表示) */}
-          {shop.image ? (
-            <div className="relative aspect-[16/9] w-full overflow-hidden">
-              <Image
-                src={shop.image} // shop.imageがnull/undefinedでないことを保証
-                alt={shop.name}
-                fill // 親要素いっぱいに表示
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" // レスポンシブなサイズ指定
-                className="object-cover transition-transform duration-300 ease-in-out group-hover:scale-105" // ホバーエフェクト
-                priority={index < 3} // 最初の数枚を優先読み込み
-              />
-            </div>
-          ) : null}
-
-          <CardHeader className="pb-3 pt-4">
+          <CardHeader className="pb-3 pt-4 px-4"> {/* paddingを個別に追加 */}
             <div className="flex items-center justify-between gap-2">
               {/* ジャンル */}
               <div className="flex items-center gap-1 flex-wrap">
@@ -130,7 +168,7 @@ export function ShopCard({ shop, index }: ShopCardProps) {
             </CardTitle>
           </CardHeader>
 
-          <CardContent className="flex-grow pb-3 pt-0 text-sm text-muted-foreground">
+          <CardContent className="flex-grow pb-3 pt-0 text-sm text-muted-foreground px-4"> {/* paddingを個別に追加 */}
             {/* エリア */}
             <div className="flex items-center gap-1.5 mb-1.5">
               <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
@@ -145,14 +183,14 @@ export function ShopCard({ shop, index }: ShopCardProps) {
 
           {/* メモ */}
           {shop.memo && shop.memo.trim() !== '' && (
-            <CardFooter className="pt-0 pb-4 text-xs text-muted-foreground border-t mt-auto pt-3">
+            <CardFooter className="pt-0 pb-4 text-xs text-muted-foreground border-t mt-auto pt-3 px-4"> {/* paddingを個別に追加 */}
               <div className="flex items-start gap-1.5">
                 <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
                 <span className="leading-relaxed">{shop.memo}</span>
               </div>
             </CardFooter>
           )}
-        </Link>
+        </Link> {/* Linkの閉じタグを移動 */}
       </Card>
     </motion.div>
   );

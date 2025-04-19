@@ -15,7 +15,8 @@ export interface Shop {
   memo: string;
   'egami-hirano': string; // egamiかhiranoか両方か
   visit: string;       // zumiかmotomuか
-  image?: string;      // オプショナルな画像フィールド
+  image?: string;      // オプショナルな画像フィールド (単一画像用、将来的に削除検討)
+  images?: string[];   // オプショナルな画像配列フィールド (カルーセル用)
 }
 
 /**

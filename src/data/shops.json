@@ -41673,6 +41673,15 @@
     "egami-hirano": "egami-hirano",
     "visit": "zumi",
     "area_category": "目黒・白金・五反田",
-    "is_takemachelin": false
+    "is_takemachelin": false,
+    "images": [
+      "/images/shops/gc_01.jpg",
+      "/images/shops/gc_02.jpg",
+      "/images/shops/gc_03.jpg",
+      "/images/shops/gc_04.jpg",
+      "/images/shops/gc_05.jpg",
+      "/images/shops/gc_06.jpg",
+      "/images/shops/gc_07.jpg"
+    ]
   }
 ]
