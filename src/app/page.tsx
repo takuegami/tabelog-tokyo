@@ -7,27 +7,52 @@ import { SkeletonCard } from '@/app/(components)/skeleton-card'; // src/app/(com
 // サーバーサイドでジャンルリストを生成する関数 (data.tsから移動)
 // データ取得関数 (サーバーサイドで実行) - shops/page.tsx と同様
 async function getShops(): Promise<Shop[]> {
-  const apiUrl = '/api/shops'; // 相対パスに変更
-  console.log(`Fetching shops for homepage from: ${apiUrl}`);
+  // 絶対URLを構築 (ローカル/Vercel環境変数から取得)
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'; // ポートを3001に修正 (ローカル環境に合わせて)
+  const apiUrl = `${baseUrl}/api/shops`;
+  console.log(`[getShops] Fetching shops from: ${apiUrl}`); // ログ識別子追加
   try {
-    // fetch に渡す URL も相対パスにする
-    // Next.js の fetch はサーバーサイドで実行される場合、自動的にホストを解決する
     const res = await fetch(apiUrl, { cache: 'no-store' });
+    console.log(`[getShops] Fetch response status: ${res.status}`); // ステータスコード確認
+
+    // 生のレスポンスボディを確認
+    const rawBody = await res.text();
+    console.log('[getShops] Raw response body (first 500 chars):', rawBody.substring(0, 500)); // 長い場合は一部表示
+
     if (!res.ok) {
-      const errorBody = await res.text();
-      console.error(`Failed to fetch shops: ${res.status} ${res.statusText}`, errorBody);
+      console.error(`[getShops] Failed to fetch shops: ${res.status} ${res.statusText}`, rawBody);
       return [];
     }
-    const data = await res.json();
-    // Zod スキーマで API レスポンスをバリデーション (デバッグログ削除)
+
+    // JSON パースを試みる
+    let data;
+    try {
+      data = JSON.parse(rawBody); // 生ボディからパース
+      // パース後のデータ確認 (最初の数件と件数)
+      console.log(`[getShops] Parsed data type: ${typeof data}, isArray: ${Array.isArray(data)}, length: ${Array.isArray(data) ? data.length : 'N/A'}`);
+      if (Array.isArray(data)) {
+          console.log('[getShops] Parsed data (first 2 items):', JSON.stringify(data.slice(0, 2), null, 2));
+      } else {
+          console.log('[getShops] Parsed data (non-array):', JSON.stringify(data, null, 2));
+      }
+    } catch (parseError) {
+      console.error('[getShops] Failed to parse JSON:', parseError, 'Raw body:', rawBody.substring(0, 500));
+      return [];
+    }
+
+    // Zod スキーマで API レスポンスをバリデーション
+    console.log('[getShops] Starting Zod validation...');
     const validationResult = shopsResponseSchema.safeParse(data);
     if (!validationResult.success) {
-      console.error('[Frontend getShops] Zod validation failed:', validationResult.error.flatten()); // エラーログは残す
-      return []; // バリデーション失敗時は空配列を返す
+      console.error('[getShops] Zod validation failed:', validationResult.error.flatten());
+      // バリデーション失敗時のデータもログ出力
+      console.error(`[getShops] Data that failed validation (type: ${typeof data}, isArray: ${Array.isArray(data)}, length: ${Array.isArray(data) ? data.length : 'N/A'}):`, JSON.stringify(Array.isArray(data) ? data.slice(0, 2) : data, null, 2));
+      return [];
     }
-    return validationResult.data; // バリデーション済みデータを返す (型安全)
+    console.log('[getShops] Zod validation successful. Returning data count:', validationResult.data.length); // 成功時の件数
+    return validationResult.data;
   } catch (error) {
-    console.error('Error during fetch or parsing shops data:', error);
+    console.error('[getShops] Error during fetch or processing:', error);
     return [];
   }
 }
