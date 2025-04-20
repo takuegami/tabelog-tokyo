@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google"; // Geist の代わりに Inter をインポート
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({ // Inter フォントを設定
+  variable: "--font-inter", // CSS 変数名を変更
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// geistMono は削除
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -25,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} antialiased`} // Inter の変数を適用 (Mono は削除)
       >
         {children}
       </body>
