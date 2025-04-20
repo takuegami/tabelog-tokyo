@@ -4,13 +4,6 @@ import path from 'path';
 import { Shop } from '@/schemas/shop'; // Shop 型をインポート
 import { supabase } from '@/lib/supabase'; // Supabase クライアントをインポート
 
-// Route Handler の context の型定義
-interface RouteContext {
-  params: {
-    id: string;
-  };
-}
-
 const dataFilePath = path.join(process.cwd(), 'src', 'data', 'shops.json');
 
 // データ読み込み関数
@@ -40,9 +33,9 @@ async function writeShops(shops: Shop[]): Promise<void> {
 // DELETE リクエストハンドラ
 export async function DELETE(
   request: NextRequest,
-  context: RouteContext
+  { params }: { params: { id: string } } // ドキュメントで一般的な形式に戻す
 ) {
-  const shopId = context.params.id;
+  const shopId = params.id;
 
   if (!shopId) {
     return NextResponse.json({ message: 'Shop ID is required' }, { status: 400 });
