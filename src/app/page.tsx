@@ -7,9 +7,11 @@ import { SkeletonCard } from '@/app/(components)/skeleton-card'; // src/app/(com
 // サーバーサイドでジャンルリストを生成する関数 (data.tsから移動)
 // データ取得関数 (サーバーサイドで実行) - shops/page.tsx と同様
 async function getShops(): Promise<Shop[]> {
-  const apiUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/shops`;
+  const apiUrl = '/api/shops'; // 相対パスに変更
   console.log(`Fetching shops for homepage from: ${apiUrl}`);
   try {
+    // fetch に渡す URL も相対パスにする
+    // Next.js の fetch はサーバーサイドで実行される場合、自動的にホストを解決する
     const res = await fetch(apiUrl, { cache: 'no-store' });
     if (!res.ok) {
       const errorBody = await res.text();
