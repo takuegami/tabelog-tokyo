@@ -69,6 +69,13 @@ export function ShopList({ initialShops }: ShopListProps) {
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
   const [shops, setShops] = React.useState<Shop[]>(initialShops); // 店舗リストの状態管理
 
+  // --- デバッグログ追加 ---
+  React.useEffect(() => {
+    console.log('[ShopList] Initial Shops Count:', initialShops.length);
+    console.log('[ShopList] Search Params:', searchParams.toString());
+  }, [initialShops, searchParams]);
+  // --- デバッグログ追加 ここまで ---
+
   // 削除処理関数
   const handleDelete = async (shopId: number) => {
     if (window.confirm('この店舗を削除してもよろしいですか？')) {
@@ -100,7 +107,11 @@ export function ShopList({ initialShops }: ShopListProps) {
   const filteredShops = React.useMemo(() => {
     // フィルターが変わったら表示数をリセット
     setDisplayCount(ITEMS_PER_PAGE);
-    return filterShops(shops, searchParams); // initialShops -> shops
+    const filtered = filterShops(shops, searchParams); // initialShops -> shops
+    // --- デバッグログ追加 ---
+    console.log('[ShopList] Filtered Shops Count:', filtered.length);
+    // --- デバッグログ追加 ここまで ---
+    return filtered;
   }, [shops, searchParams]); // 依存配列に shops を追加
 
   // 表示するリスト
