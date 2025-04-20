@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { Shop } from '@/schemas/shop'; // Shop 型をインポート
@@ -32,7 +32,7 @@ async function writeShops(shops: Shop[]): Promise<void> {
 
 // DELETE リクエストハンドラ
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   context: { params: { id: string } }
 ) {
   const shopId = context.params.id;
