@@ -33,9 +33,9 @@ async function writeShops(shops: Shop[]): Promise<void> {
 // DELETE リクエストハンドラ
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
-  const shopId = params.id;
+  const shopId = context.params.id;
 
   if (!shopId) {
     return NextResponse.json({ message: 'Shop ID is required' }, { status: 400 });
