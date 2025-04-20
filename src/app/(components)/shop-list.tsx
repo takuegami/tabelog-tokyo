@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ShopCard } from './shop-card';
-import type { Shop } from '@/lib/data';
+import type { Shop } from '@/schemas/shop'; // 正しいパスから Shop 型をインポート
 import { normalizeSearchText } from '@/lib/utils';
 import { SkeletonCard } from './skeleton-card'; // スケルトンカードをインポート
 
@@ -29,10 +29,11 @@ function filterShops(shops: Shop[], params: URLSearchParams): Shop[] {
     if (genre === 'all') {
       genreMatch = !shop.is_takemachelin || showTakemachelin;
     } else if (genre === 'タケマシュラン') {
-      genreMatch = shop.is_takemachelin && showTakemachelin;
+      // is_takemachelin が true であることを明示的にチェック
+      genreMatch = shop.is_takemachelin === true && showTakemachelin;
     } else {
       genreMatch =
-        shop.genre === genre && (!shop.is_takemachelin || showTakemachelin);
+        shop.genre === genre && (shop.is_takemachelin !== true || showTakemachelin); // null/undefined も false 扱い
     }
     if (!genreMatch) return false;
 
@@ -48,10 +49,11 @@ function filterShops(shops: Shop[], params: URLSearchParams): Shop[] {
   });
 
   return filtered.sort((a, b) => {
+    // プロパティ名を egami_hirano に修正
     const hasEgamiHiranoA =
-      a['egami-hirano'] && a['egami-hirano'].trim() !== '';
+      a.egami_hirano && a.egami_hirano.trim() !== '';
     const hasEgamiHiranoB =
-      b['egami-hirano'] && b['egami-hirano'].trim() !== '';
+      b.egami_hirano && b.egami_hirano.trim() !== '';
     if (hasEgamiHiranoA && !hasEgamiHiranoB) return -1;
     if (!hasEgamiHiranoA && hasEgamiHiranoB) return 1;
     const nameA = a.name || '';
@@ -65,13 +67,41 @@ export function ShopList({ initialShops }: ShopListProps) {
   const loadMoreRef = React.useRef<HTMLDivElement>(null);
   const [displayCount, setDisplayCount] = React.useState(ITEMS_PER_PAGE);
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
+  const [shops, setShops] = React.useState<Shop[]>(initialShops); // 店舗リストの状態管理
 
-  // フィルタリングされたリスト
+  // 削除処理関数
+  const handleDelete = async (shopId: number) => {
+    if (window.confirm('この店舗を削除してもよろしいですか？')) {
+      try {
+        const response = await fetch(`/api/shops/${shopId}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || '店舗の削除に失敗しました。');
+        }
+
+        // 状態を更新して削除された店舗を除外
+        setShops((prevShops) => prevShops.filter((shop) => shop.id !== shopId));
+        // ここでトースト通知などを表示すると良い
+        console.log(`Shop with ID ${shopId} deleted successfully.`);
+
+      } catch (error) {
+        console.error('Error deleting shop:', error);
+        // エラー通知を表示
+        alert(`エラー: ${error instanceof Error ? error.message : '不明なエラーが発生しました。'}`);
+      }
+    }
+  };
+
+
+  // フィルタリングされたリスト (shops 状態に依存)
   const filteredShops = React.useMemo(() => {
     // フィルターが変わったら表示数をリセット
     setDisplayCount(ITEMS_PER_PAGE);
-    return filterShops(initialShops, searchParams);
-  }, [initialShops, searchParams]);
+    return filterShops(shops, searchParams); // initialShops -> shops
+  }, [shops, searchParams]); // 依存配列に shops を追加
 
   // 表示するリスト
   const shopsToDisplay = React.useMemo(() => {
@@ -113,7 +143,7 @@ export function ShopList({ initialShops }: ShopListProps) {
       }
       observer.disconnect();
     };
-  }, [filteredShops.length, displayCount, isLoadingMore]); // filteredShops.length も依存配列に追加
+  }, [filteredShops.length, displayCount, isLoadingMore]); // セミコロンは不要
 
   return (
     <div>
@@ -125,7 +155,8 @@ export function ShopList({ initialShops }: ShopListProps) {
       {shopsToDisplay.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {shopsToDisplay.map((shop, index) => (
-            <ShopCard key={shop.url || shop.name} shop={shop} index={index} />
+            // key を shop.id に変更して一意性を保証
+            <ShopCard key={shop.id} shop={shop} index={index} onDelete={handleDelete}></ShopCard> // 閉じ括弧を追加
           ))}
           {/* ローディング中のスケルトン表示 */}
           {isLoadingMore &&

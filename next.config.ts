@@ -44,6 +44,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**', // すべてのパスを許可
       },
+      { // Supabase Storage のドメインを追加
+        protocol: 'https',
+        hostname: 'jwybgokjzcqpmqncibdg.supabase.co', // あなたの Supabase プロジェクトのホスト名
+        port: '',
+        pathname: '/**', // すべてのパスを許可するように変更
+      },
     ],
   },
   // 他のNext.js設定があればここに追加
@@ -51,8 +57,9 @@ const nextConfig: NextConfig = {
 
 // withPWAInitを呼び出して設定をマージ
 // nextConfigをanyにキャストして型エラーを回避
-const configWithPWA = withPWAInit(pwaConfig)(nextConfig as any);
+// const configWithPWA = withPWAInit(pwaConfig)(nextConfig as any); // PWA設定を一時的に無効化
 
 // 型エラーを回避するため、anyとしてエクスポート (一時的な対処)
 // 本来はnext-pwa側の型定義が更新されるのを待つか、バージョンを調整するのが望ましい
-export default configWithPWA; // as any は不要になるはず
+// export default configWithPWA; // as any は不要になるはず
+export default nextConfig; // 素のNext.js設定をエクスポート

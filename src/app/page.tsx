@@ -1,16 +1,42 @@
 import * as React from 'react';
-import { loadShopData } from '@/lib/data';
-import { FilterControls } from '@/app/(components)/filter-controls';
-import { ShopList } from '@/app/(components)/shop-list';
-import { SkeletonCard } from '@/app/(components)/skeleton-card';
+import { Shop, shopsResponseSchema } from '@/schemas/shop'; // Shop 型と shopsResponseSchema をインポート
+import { FilterControls } from '@/app/(components)/filter-controls'; // src/app/(components)/filter-controls.tsx を指すはず
+import { ShopList } from '@/app/(components)/shop-list'; // src/app/(components)/shop-list.tsx を指すはず
+import { SkeletonCard } from '@/app/(components)/skeleton-card'; // src/app/(components)/skeleton-card.tsx を指すはず
 
 // サーバーサイドでジャンルリストを生成する関数 (data.tsから移動)
-async function getGenres(shops: Awaited<ReturnType<typeof loadShopData>>): Promise<string[]> {
+// データ取得関数 (サーバーサイドで実行) - shops/page.tsx と同様
+async function getShops(): Promise<Shop[]> {
+  const apiUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/shops`;
+  console.log(`Fetching shops for homepage from: ${apiUrl}`);
+  try {
+    const res = await fetch(apiUrl, { cache: 'no-store' });
+    if (!res.ok) {
+      const errorBody = await res.text();
+      console.error(`Failed to fetch shops: ${res.status} ${res.statusText}`, errorBody);
+      return [];
+    }
+    const data = await res.json();
+    // Zod スキーマで API レスポンスをバリデーション (デバッグログ削除)
+    const validationResult = shopsResponseSchema.safeParse(data);
+    if (!validationResult.success) {
+      console.error('[Frontend getShops] Zod validation failed:', validationResult.error.flatten()); // エラーログは残す
+      return []; // バリデーション失敗時は空配列を返す
+    }
+    return validationResult.data; // バリデーション済みデータを返す (型安全)
+  } catch (error) {
+    console.error('Error during fetch or parsing shops data:', error);
+    return [];
+  }
+}
+
+// サーバーサイドでジャンルリストを生成する関数
+async function getGenres(shops: Shop[]): Promise<string[]> {
   // タケマシュランを除外し、重複を除去してソート
   const genres = [
     ...new Set(
       shops
-        .filter((s) => !s.is_takemachelin)
+        .filter((s) => !s.is_takemachelin) // is_takemachelin が boolean であることを想定
         .map((shop) => shop.genre || 'ジャンル不明')
     ),
   ].sort((a, b) => a.localeCompare(b, 'ja'));
@@ -20,9 +46,9 @@ async function getGenres(shops: Awaited<ReturnType<typeof loadShopData>>): Promi
 
 // このページはサーバーサイドでレンダリングされます (SSR or SSG)
 export default async function HomePage() {
-  // サーバーサイドで店舗データとジャンルリストを読み込む
-  const allShops = await loadShopData();
-  const availableGenres = await getGenres(allShops); // ジャンルリストを取得
+  // サーバーサイドで店舗データとジャンルリストを取得
+  const allShops = await getShops(); // APIから取得するように変更
+  const availableGenres = await getGenres(allShops); // APIから取得したデータを使用
 
   return (
     <div className="flex flex-col gap-8">
@@ -53,6 +79,7 @@ export default async function HomePage() {
 
 // FilterControlsのローディング中に表示するスケルトン (仮)
 function FilterControlsSkeleton() {
+  // Shadcn UI の Skeleton を使うか、単純な div で表現
   return <div className="h-[68px] rounded-lg border bg-card shadow-sm animate-pulse"></div>;
 }
 

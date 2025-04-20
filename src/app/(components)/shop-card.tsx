@@ -3,7 +3,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { MapPin, Utensils, CalendarDays, Info } from 'lucide-react'; // アイコンをインポート
+import { MapPin, Utensils, CalendarDays, Info, Trash2 } from 'lucide-react'; // Trash2 アイコンをインポート
+import { Button } from '@/components/ui/button'; // Button をインポート
 import {
   Carousel,
   CarouselContent,
@@ -20,12 +21,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import type { Shop } from '@/lib/data'; // Shop型をインポート
+import type { Shop } from '@/schemas/shop'; // 正しいパスから Shop 型をインポート
 // import { cn } from '@/lib/utils'; // cnは未使用のため削除
 
 interface ShopCardProps {
   shop: Shop;
   index: number; // アニメーションのstagger用
+  onDelete: (shopId: number) => void; // 削除処理関数を追加
 }
 
 // アニメーション設定
@@ -42,7 +44,13 @@ const cardVariants = {
   }),
 };
 
-export function ShopCard({ shop, index }: ShopCardProps) {
+export function ShopCard({ shop, index, onDelete }: ShopCardProps) { // onDelete を props から受け取る
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.preventDefault(); // Link の遷移を防ぐ
+    e.stopPropagation(); // イベントの伝播を止める
+    onDelete(shop.id); // 削除関数を呼び出す
+  };
+
   return (
     <motion.div
       variants={cardVariants}
@@ -51,7 +59,18 @@ export function ShopCard({ shop, index }: ShopCardProps) {
       custom={index} // staggerの遅延時間をカスタム値として渡す
       whileHover={{ y: -4, transition: { duration: 0.15 } }} // ホバーアニメーション
     >
-      <Card className="h-full flex flex-col overflow-hidden transition-shadow hover:shadow-md group p-0"> {/* p-0を追加してパディングを削除 */}
+      <Card className="relative h-full flex flex-col overflow-hidden transition-shadow hover:shadow-md group p-0"> {/* relative を追加 */}
+        {/* 削除ボタン */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-2 right-2 z-20 h-7 w-7 rounded-full bg-background/70 text-destructive opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-destructive hover:text-destructive-foreground"
+          onClick={handleDeleteClick}
+          aria-label={`店舗 ${shop.name} を削除`}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+
         {/* 画像カルーセル (shop.imagesが存在し、空でない場合のみ表示) - Linkの外に移動 */}
         {shop.images && shop.images.length > 0 ? (
           <Carousel
@@ -122,7 +141,8 @@ export function ShopCard({ shop, index }: ShopCardProps) {
               {/* egami-hirano アイコン */}
               {/* egami-hirano アイコン */}
               <div className="flex items-center gap-1">
-                {(shop['egami-hirano'] === 'egami' || shop['egami-hirano'] === 'egami-hirano') && (
+                {/* プロパティ名を egami_hirano に修正 */}
+                {(shop.egami_hirano === 'egami' || shop.egami_hirano === 'egami-hirano') && (
                   <Image
                     src="/images/egami_icon.svg" // publicディレクトリからの相対パス
                     alt="Egami おすすめ"
@@ -131,7 +151,8 @@ export function ShopCard({ shop, index }: ShopCardProps) {
                     className="h-4 w-4" // Tailwind CSSでサイズを再指定
                   />
                 )}
-                {(shop['egami-hirano'] === 'hirano' || shop['egami-hirano'] === 'egami-hirano') && (
+                {/* プロパティ名を egami_hirano に修正 */}
+                {(shop.egami_hirano === 'hirano' || shop.egami_hirano === 'egami-hirano') && (
                   <Image
                     src="/images/hirano_icon.svg" // publicディレクトリからの相対パス
                     alt="Hirano おすすめ"
