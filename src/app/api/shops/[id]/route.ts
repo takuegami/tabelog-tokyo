@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { dbShopSchema, Shop } from '@/schemas/shop'; // Shop 型とスキーマをインポート (shopSchema -> dbShopSchema)
+import { Shop } from '@/schemas/shop'; // Shop 型をインポート
 import { supabase } from '@/lib/supabase'; // Supabase クライアントをインポート
 
 const dataFilePath = path.join(process.cwd(), 'src', 'data', 'shops.json');

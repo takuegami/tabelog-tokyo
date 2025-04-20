@@ -1,8 +1,8 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, ControllerRenderProps, FieldValues } from 'react-hook-form';
-import { z } from 'zod';
+import { useForm, ControllerRenderProps } from 'react-hook-form';
+// import { z } from 'zod'; // shopFormSchema で zod は使われているが、このファイルでは直接使っていないためコメントアウト or 削除
 import { Button } from '@/components/ui/button';
 import {
   Form,

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase'; // Supabase クライアントをインポート
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -61,7 +61,7 @@ export function MultiImageUploader({
         const fileName = `${uuidv4()}.${fileExt}`; // 一意なファイル名
         const filePath = `${fileName}`; // バケット内のパス
 
-        const { data, error } = await supabase.storage
+        const { error } = await supabase.storage
           .from(bucketName)
           .upload(filePath, uploadingFile.file);
 
@@ -174,7 +174,7 @@ export function MultiImageUploader({
                 fill
                 sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, 20vw"
                 className="object-cover rounded-md border"
-                onError={(e) => {
+                onError={() => {
                   // 画像読み込みエラー時の処理（例: 代替画像表示やURL削除）
                   console.error(`Failed to load image: ${url}`);
                   // handleRemoveUploadedUrl(url); // エラー画像をリストから削除する場合

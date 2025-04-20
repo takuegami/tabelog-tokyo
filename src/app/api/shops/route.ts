@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
 
     console.log('Successfully inserted shop:', newShop); // 成功ログ
     return NextResponse.json(newShop, { status: 201 }); // 201 Created ステータスを返す
-  } catch (err: any) {
+  } catch (err: unknown) {
      if (err instanceof SyntaxError) {
        return NextResponse.json({ error: 'Invalid JSON format' }, { status: 400 });
      }
