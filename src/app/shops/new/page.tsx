@@ -25,6 +25,7 @@ import {
 import { shopFormSchema, ShopForm } from '@/schemas/shop';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react'; // useEffect をインポート
+import { createClient } from '@/lib/supabase/client'; // Supabase クライアントをインポート
 import { MultiImageUploader } from '@/app/(components)/multi-image-uploader';
 import { Skeleton } from '@/components/ui/skeleton'; // Skeleton をインポート
 
@@ -51,9 +52,20 @@ export default function NewShopPage() {
   const [options, setOptions] = useState<OptionsResponse | null>(null);
   const [isLoadingOptions, setIsLoadingOptions] = useState(true);
 
-  // コンポーネントマウント時にAPIからオプションを取得
+  const supabase = createClient(); // Supabase クライアントを初期化
+
+  // コンポーネントマウント時に認証チェックとオプション取得
   useEffect(() => {
-    const fetchOptions = async () => {
+    const checkAuthAndFetchOptions = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        // 未認証の場合はログインページへリダイレクト
+        router.push('/login');
+        return; // 認証されていない場合は以降の処理を中断
+      }
+
+      // 認証済みの場合のみオプションを取得
       setIsLoadingOptions(true);
       try {
         const response = await fetch('/api/options');
@@ -69,8 +81,9 @@ export default function NewShopPage() {
         setIsLoadingOptions(false);
       }
     };
-    fetchOptions();
-  }, []); // 空の依存配列で初回のみ実行
+
+    checkAuthAndFetchOptions();
+  }, [router, supabase]); // router と supabase を依存配列に追加
 
   const form = useForm<ShopForm>({
     resolver: zodResolver(shopFormSchema),

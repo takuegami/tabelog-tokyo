@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import fs from 'fs/promises'; // fs/promises をインポート
-import path from 'path'; // path をインポート
-import { supabase } from '@/lib/supabase'; // Supabase クライアントをインポート (パスエイリアスを使用)
-import { shopFormSchema } from '@/schemas/shop'; // dbShopSchema と DbShop は不要に
-import { getAllShopsData } from '@/lib/data'; // 新しい関数をインポート
+import fs from 'fs/promises';
+import path from 'path';
+// import { supabase } from '@/lib/supabase'; // 不要になるため削除
+import { createClient } from '@/lib/supabase/server'; // サーバー用クライアントをインポート
+import { shopFormSchema } from '@/schemas/shop';
+import { getAllShopsData } from '@/lib/data';
 
 export const dynamic = 'force-dynamic'; // Always fetch the latest data
 
@@ -23,6 +24,14 @@ export async function GET() {
 // POST: 新規店舗情報を登録
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createClient(); // サーバー用クライアントを作成
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      console.error('API Auth Error:', authError);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
 
     // Zod スキーマでバリデーション
@@ -51,15 +60,17 @@ export async function POST(request: NextRequest) {
     const dataToInsert = {
       ...validatedData,
       images: images ?? null, // images がなければ null を設定
+      user_id: user.id, // 認証されたユーザーのIDを追加
     };
 
     console.log('Inserting data to Supabase:', dataToInsert); // 挿入データを確認 (images が含まれているか)
 
+    // insert 操作は RLS ポリシーによって保護されている
     const { data: newShop, error } = await supabase
       .from('shops')
-      .insert(dataToInsert) // images を含まないデータを挿入
-      .select() // 挿入されたレコードを返すように指定
-      .single(); // 単一のレコードを期待
+      .insert(dataToInsert)
+      .select()
+      .single();
 
     if (error) {
       console.error('Error inserting shop:', error);
