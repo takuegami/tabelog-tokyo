@@ -134,12 +134,17 @@ export async function PUT(
 
     // バリデーションを一旦スキップして、受け取った body をそのまま使う (後で追加推奨)
     const validatedData = body;
+    // 受け取ったデータ全体をログ出力
+    console.log(`[API PUT /api/shops/${shopId}] Received data:`, JSON.stringify(validatedData, null, 2));
 
 
     if (numericShopId > 0) {
       // --- Supabase のデータを更新 ---
       // created_at や id は更新対象から除外することが一般的
       const { id, created_at, ...updateData } = validatedData;
+      // Supabase に渡す更新データをログ出力
+      console.log(`[API PUT /api/shops/${shopId}] Data to update in Supabase:`, JSON.stringify(updateData, null, 2));
+
 
       const { data, error } = await supabase
         .from('shops')
