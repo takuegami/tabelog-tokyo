@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Search, X } from 'lucide-react';
+import { Search, X, Loader2 } from 'lucide-react'; // Loader2 をインポート
 // import { useDebouncedCallback } from 'use-debounce'; // 不要なインポートを削除
 
 import { Button } from '@/components/ui/button';
@@ -239,7 +239,11 @@ export function FilterControls({ genres: availableGenres }: FilterControlsProps)
         aria-label="フィルターをリセット"
         disabled={isPending}
       >
-        <X className="h-4 w-4" />
+        {isPending ? (
+          <Loader2 className="h-4 w-4 animate-spin" /> // isPending中はスピナー表示
+        ) : (
+          <X className="h-4 w-4" /> // 通常時はXアイコン
+        )}
       </Button>
     </div>
   );

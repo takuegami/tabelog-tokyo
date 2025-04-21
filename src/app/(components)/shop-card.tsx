@@ -1,9 +1,11 @@
 'use client'; // framer-motionを使用するためクライアントコンポーネントに
 
 import Image from 'next/image';
-import Link from 'next/link';
+import Link from 'next/link'; // Link はテキスト部分で使用
+import { useRouter } from 'next/navigation'; // useRouter をインポート
+import * as React from 'react'; // React と useTransition をインポート
 import { motion } from 'framer-motion';
-import { MapPin, Utensils, CalendarDays, Info, Trash2, Pencil } from 'lucide-react'; // Pencil アイコンをインポート
+import { MapPin, Utensils, CalendarDays, Info, Trash2, Pencil, Loader2 } from 'lucide-react'; // Pencil, Loader2 アイコンをインポート
 import { Button } from '@/components/ui/button';
 import {
   Carousel,
@@ -45,10 +47,18 @@ const cardVariants = {
 };
 
 export function ShopCard({ shop, index, onDelete }: ShopCardProps) { // onDelete を props から受け取る
+  const router = useRouter(); // useRouterフックを使用
+  const [isEditPending, startEditTransition] = React.useTransition(); // 編集ボタン用のトランジション
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.preventDefault(); // Link の遷移を防ぐ
     e.stopPropagation(); // イベントの伝播を止める
     onDelete(shop.id); // 削除関数を呼び出す
+  };
+
+  // 編集ボタンクリック時の処理
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // イベント伝播を停止
+    startEditTransition(() => router.push(`/shops/${shop.id}/edit`)); // トランジション内で画面遷移
   };
 
   return (
@@ -208,22 +218,17 @@ export function ShopCard({ shop, index, onDelete }: ShopCardProps) { // onDelete
         {/* --- ボタンを配置する CardFooter (スタイル変更) --- */}
         {/* border-t を削除、padding調整、gap調整 */}
         <CardFooter className="flex justify-end gap-1 pt-1 pb-2 px-3">
-          {/* 編集ボタン */}
-          <Link
-            href={`/shops/${shop.id}/edit`}
-            passHref
-            legacyBehavior
+          {/* 編集ボタン (Linkを削除し、onClickとdisabled, アイコン切り替えを追加) */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-primary"
+            onClick={handleEditClick} // 作成したハンドラを設定
+            disabled={isEditPending} // トランジション中は無効化
+            aria-label={`店舗 ${shop.name} を編集`}
           >
-            <Button
-              variant="ghost" // ghost スタイルに変更
-              size="icon"     // アイコンサイズに
-              className="h-7 w-7 text-muted-foreground hover:text-primary" // サイズと色調整
-              onClick={(e) => e.stopPropagation()}
-              aria-label={`店舗 ${shop.name} を編集`}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          </Link>
+            {isEditPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+          </Button>
           {/* 削除ボタン */}
           <Button
             variant="ghost" // ghost スタイルに変更
