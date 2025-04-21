@@ -26,11 +26,13 @@ interface OptionsResponse {
 // ページコンポーネントの Props 型定義 (Next.js App Router の規約)
 interface EditShopPageProps {
   params: { id: string };
+  searchParams: { [key: string]: string | string[] | undefined }; // searchParams を追加
 }
 
-export default async function EditShopPage({ params }: EditShopPageProps) { // async 関数に変更し、props を受け取る
+export default async function EditShopPage({ params, searchParams }: EditShopPageProps) { // searchParams を受け取る
   // const router = useRouter(); // クライアントフックは削除
   const shopId = params.id; // props から取得
+  const redirectUrl = typeof searchParams.redirectUrl === 'string' ? searchParams.redirectUrl : null; // redirectUrl を取得
   // useState は削除
 
   const supabase = createClient(); // ★ サーバー用クライアントを作成
@@ -141,6 +143,7 @@ export default async function EditShopPage({ params }: EditShopPageProps) { // a
            shopId={shopId}
            initialShopData={initialShopData}
            options={options}
+           redirectUrl={redirectUrl} // redirectUrl を渡す
          />
       )}
     </div>

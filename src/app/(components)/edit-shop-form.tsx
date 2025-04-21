@@ -48,9 +48,10 @@ interface EditShopFormProps {
   shopId: string; // shopId を props で受け取る
   initialShopData: Shop; // 初期データを props で受け取る
   options: OptionsResponse; // オプションデータを props で受け取る
+  redirectUrl: string | null; // ★ redirectUrl を props で受け取る
 }
 
-export function EditShopForm({ shopId, initialShopData, options }: EditShopFormProps) {
+export function EditShopForm({ shopId, initialShopData, options, redirectUrl }: EditShopFormProps) { // ★ redirectUrl を受け取る
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -99,9 +100,11 @@ export function EditShopForm({ shopId, initialShopData, options }: EditShopFormP
         throw new Error(errorData.message || '店舗の更新に失敗しました。');
       }
 
-      router.push('/', { scroll: false });
-      router.refresh();
-      console.log('店舗が正常に更新されました。');
+      // ★ redirectUrl があればそこへ、なければ '/' へリダイレクト
+      const destination = redirectUrl ? decodeURIComponent(redirectUrl) : '/';
+      router.push(destination, { scroll: false });
+      router.refresh(); // ページデータを再取得して更新
+      console.log(`店舗が正常に更新されました。リダイレクト先: ${destination}`);
 
     } catch (error) {
       console.error('店舗更新エラー:', error);

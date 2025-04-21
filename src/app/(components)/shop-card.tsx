@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link'; // Link はテキスト部分で使用
-import { useRouter } from 'next/navigation'; // useRouter をインポート
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'; // useRouter, usePathname, useSearchParams をインポート
 import * as React from 'react'; // React と useTransition をインポート
 import { motion } from 'framer-motion';
 import { MapPin, Utensils, CalendarDays, Info, Trash2, Pencil, Loader2 } from 'lucide-react'; // Pencil, Loader2 アイコンをインポート
@@ -48,6 +48,8 @@ const cardVariants = {
 
 export function ShopCard({ shop, index, onDelete }: ShopCardProps) { // onDelete を props から受け取る
   const router = useRouter(); // useRouterフックを使用
+  const pathname = usePathname(); // 現在のパスを取得
+  const searchParams = useSearchParams(); // 現在の検索パラメータを取得
   const [isEditPending, startEditTransition] = React.useTransition(); // 編集ボタン用のトランジション
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.preventDefault(); // Link の遷移を防ぐ
@@ -58,7 +60,10 @@ export function ShopCard({ shop, index, onDelete }: ShopCardProps) { // onDelete
   // 編集ボタンクリック時の処理
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // イベント伝播を停止
-    startEditTransition(() => router.push(`/shops/${shop.id}/edit`)); // トランジション内で画面遷移
+    const currentSearchParams = searchParams.toString(); // 検索パラメータを文字列に変換
+    const redirectUrl = `${pathname}${currentSearchParams ? `?${currentSearchParams}` : ''}`; // 現在のURLを構築
+    const editUrl = `/shops/${shop.id}/edit?redirectUrl=${encodeURIComponent(redirectUrl)}`; // 編集ページのURLにredirectUrlを追加
+    startEditTransition(() => router.push(editUrl)); // トランジション内で画面遷移
   };
 
   return (
