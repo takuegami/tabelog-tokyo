@@ -161,7 +161,9 @@ export default function EditShopPage() { // コンポーネント名を変更
         throw new Error(errorData.message || '店舗の更新に失敗しました。'); // メッセージ変更
       }
 
-      router.push('/'); // 更新後トップページへ遷移（必要に応じて変更）
+      // 更新後トップページへ遷移し、データを再取得してUIを更新
+      router.push('/', { scroll: false }); // スクロール位置を維持して遷移
+      router.refresh(); // サーバーからデータを再取得
       console.log('店舗が正常に更新されました。'); // メッセージ変更
 
     } catch (error) {
