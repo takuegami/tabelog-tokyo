@@ -7,6 +7,8 @@ import { ShopList } from '@/app/(components)/shop-list';
 import { SkeletonCard } from '@/app/(components)/skeleton-card';
 import { getAllShopsData } from '@/lib/data'; // データ取得関数をインポート
 
+export const dynamic = 'force-dynamic'; // Always fetch the latest data on request
+
 // データ取得関数 getShops は不要になったため削除
 
 // サーバーサイドでジャンルリストを生成する関数
