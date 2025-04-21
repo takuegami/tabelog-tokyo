@@ -3,13 +3,20 @@
 import * as React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server'; // サーバー用クライアント
-import { Button } from '@/components/ui/button';
+import { createClient } from '@/lib/supabase/server';
+import { Button, buttonVariants } from '@/components/ui/button'; // ★ buttonVariants をインポート
 import { redirect } from 'next/navigation';
+import { cn } from '@/lib/utils'; // ★ cn をインポート
 
 export async function Header() {
+  console.log('[Header] Rendering Header component...'); // ★ログ追加
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser(); // ★ error も取得
+  console.log('[Header] getUser result - User:', user); // ★ログ追加
+  console.log('[Header] getUser result - Error:', error); // ★ログ追加
+  if (error) {
+    console.error('[Header] Error fetching user:', error.message);
+  }
 
   const signOut = async () => {
     'use server'; // サーバーアクションとしてマーク
@@ -37,10 +44,21 @@ export async function Header() {
         {/* 認証状態に応じて表示を切り替え */}
         <div className="flex items-center space-x-4">
           {user ? (
-            <form action={signOut}>
-              <Button variant="outline" size="sm">ログアウト</Button>
-            </form>
+            <>
+              {/* 新規登録ボタン (asChild を使わない実装) */}
+              <Link
+                href="/shops/new"
+                className={cn(buttonVariants({ variant: "default", size: "sm" }))} // ★ buttonVariants を適用
+              >
+                新規登録
+              </Link>
+              {/* ログアウトボタン */}
+              <form action={signOut}>
+                <Button variant="outline" size="sm">ログアウト</Button>
+              </form>
+            </>
           ) : (
+            /* ログインボタン */
             <Button asChild variant="outline" size="sm">
               <Link href="/login">ログイン</Link>
             </Button>

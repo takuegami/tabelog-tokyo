@@ -1,32 +1,46 @@
 import { NextResponse } from 'next/server';
-import path from 'path';
-import fs from 'fs/promises'; // fs/promises を使用
+// import path from 'path'; // 不要
+// import fs from 'fs/promises'; // 不要
+import { createClient } from '@/lib/supabase/server'; // ★ Supabase クライアントをインポート
 
-// Shop 型の定義 (必要最低限)
-interface Shop {
-  genre?: string;
-  area_category?: string;
-}
+// Shop 型の定義は不要
 
-// shops.json のパスを取得
-// process.cwd() はプロジェクトのルートディレクトリを指す
-const dataFilePath = path.join(process.cwd(), 'src', 'data', 'shops.json');
+// dataFilePath は不要
 
 export async function GET() {
+  console.log('[API Options] GET request received.');
   try {
-    // JSON ファイルを非同期で読み込み
-    const fileContent = await fs.readFile(dataFilePath, 'utf-8');
-    const shops: Shop[] = JSON.parse(fileContent);
+    const supabase = createClient(); // ★ Supabase クライアントを作成
+    console.log('[API Options] Attempting to fetch data from Supabase...'); // ★ ログ変更
+
+    // Supabase から genre と area_category を取得 (null を除外)
+    const { data: shopsData, error } = await supabase
+      .from('shops')
+      .select('genre, area_category'); // ★ 必要なカラムのみ選択
+
+    if (error) {
+      console.error('[API Options] Error fetching data from Supabase:', error); // ★ エラーログ変更
+      throw error; // エラーを再スローして catch ブロックで処理
+    }
+
+    if (!shopsData) {
+        console.log('[API Options] No data received from Supabase.'); // ★ データなしログ
+        // データがない場合は空のオプションを返す
+         return NextResponse.json({ genres: [], areaCategories: [] });
+    }
+
+    console.log(`[API Options] Data fetched successfully from Supabase. Count: ${shopsData.length}`); // ★ ログ変更
 
     // ジャンルとエリアカテゴリのユニークなリストを作成
     const genres = new Set<string>();
     const areaCategories = new Set<string>();
 
-    shops.forEach(shop => {
-      if (shop.genre) {
+    shopsData.forEach(shop => { // ★ shopsData を使用
+      // null または空文字列でない場合のみ追加
+      if (shop.genre && shop.genre.trim() !== '') {
         genres.add(shop.genre);
       }
-      if (shop.area_category) {
+      if (shop.area_category && shop.area_category.trim() !== '') {
         areaCategories.add(shop.area_category);
       }
     });
@@ -41,7 +55,8 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('Failed to read or parse shops.json:', error);
-    return NextResponse.json({ message: 'Failed to fetch options' }, { status: 500 });
+    // ★ Supabase エラーまたはその他の予期せぬエラー
+    console.error('[API Options] Error fetching options from Supabase:', error);
+    return NextResponse.json({ message: 'Failed to fetch options due to internal server error.' }, { status: 500 });
   }
 }

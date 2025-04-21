@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { Shop, shopFormSchema } from '@/schemas/shop'; // shopFormSchema もインポート
-import { supabase } from '@/lib/supabase';
+import { Shop, shopFormSchema } from '@/schemas/shop';
+// import { supabase } from '@/lib/supabase'; // 古いクライアントを削除
+import { createClient } from '@/lib/supabase/server'; // サーバー用クライアントをインポート
 
 // JSON 関連の関数 (readShops, writeShops) と dataFilePath は不要になったため削除
 
@@ -12,24 +13,35 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const shopId = params.id;
+  console.log(`[API GET /api/shops/${shopId}] Received request.`); // ★ログ追加
 
   if (!shopId) {
     return NextResponse.json({ message: 'Shop ID is required' }, { status: 400 });
   }
 
   try {
+    const supabase = createClient(); // ★ 新しいクライアントを作成
+    // ★ 認証チェックを追加 (任意だが、RLSで制御するなら不要な場合も)
+    // const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // if (authError || !user) {
+    //   console.error(`[API GET /api/shops/${shopId}] Auth Error:`, authError);
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // }
+    // console.log(`[API GET /api/shops/${shopId}] User authenticated:`, user?.id); // ★ログ追加
+
     const numericShopId = parseInt(shopId, 10);
     if (isNaN(numericShopId)) {
       return NextResponse.json({ message: 'Invalid Shop ID format' }, { status: 400 });
     }
 
-    // JSON 関連の分岐を削除し、Supabase のみから取得
+    console.log(`[API GET /api/shops/${shopId}] Fetching shop data from Supabase...`); // ★ログ追加
     // --- Supabase からデータを取得 ---
-    const { data: shop, error } = await supabase // 変数名を shop に変更
+    // RLSのSELECTポリシーに基づいてデータが取得される
+    const { data: shop, error } = await supabase
       .from('shops')
-        .select('*') // 必要なカラムを指定する方が効率的
-        .eq('id', numericShopId)
-        .single(); // 単一のレコードを取得
+      .select('*')
+      .eq('id', numericShopId)
+      .single();
 
       if (error) {
         // データが見つからない場合 (PGRST116) は 404 を返す
@@ -75,6 +87,14 @@ export async function PUT(
   }
 
   try {
+    const supabase = createClient(); // ★ 新しいクライアントを作成
+    const { data: { user }, error: authError } = await supabase.auth.getUser(); // ★ 認証チェック追加
+
+    if (authError || !user) {
+      console.error(`[API PUT /api/shops/${shopId}] Auth Error:`, authError);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const numericShopId = parseInt(shopId, 10);
     if (isNaN(numericShopId)) {
       return NextResponse.json({ message: 'Invalid Shop ID format' }, { status: 400 });
@@ -100,11 +120,14 @@ export async function PUT(
     console.log(`[API PUT /api/shops/${shopId}] Data to update in Supabase:`, JSON.stringify(updateData, null, 2));
 
 
+      // RLSのUPDATEポリシーに基づいて更新が行われる
+      // 必要であれば .eq('user_id', user.id) を追加
       const { data, error } = await supabase
         .from('shops')
         .update(updateData)
         .eq('id', numericShopId)
-        .select() // 更新後のデータを返す
+        // .eq('user_id', user.id) // ★ 誰でも更新可能にするためコメントアウト
+        .select()
         .single();
 
       if (error) {
@@ -145,18 +168,28 @@ export async function DELETE(
   }
 
   try {
+    const supabase = createClient(); // ★ 新しいクライアントを作成
+    const { data: { user }, error: authError } = await supabase.auth.getUser(); // ★ 認証チェック追加
+
+    if (authError || !user) {
+      console.error(`[API DELETE /api/shops/${shopId}] Auth Error:`, authError);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // shopId を数値に変換
     const numericShopId = parseInt(shopId, 10);
     if (isNaN(numericShopId)) {
       return NextResponse.json({ message: 'Invalid Shop ID format' }, { status: 400 });
     }
 
-    // JSON 関連の分岐を削除し、Supabase のみ削除
     // --- Supabase のデータを削除 ---
+    // RLSのDELETEポリシーに基づいて削除が行われる
+    // 必要であれば .eq('user_id', user.id) を追加
     const { error } = await supabase
       .from('shops')
-        .delete()
-        .eq('id', numericShopId); // 数値の ID で Supabase を検索
+      .delete()
+      .eq('id', numericShopId);
+      // .eq('user_id', user.id); // ★ 誰でも削除可能にするためコメントアウト
 
       if (error) {
         console.error(`[API DELETE /api/shops/${shopId}] Error deleting shop from Supabase:`, error); // パスを元に戻す

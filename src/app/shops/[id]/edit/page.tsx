@@ -1,447 +1,148 @@
-'use client';
+// 'use client'; // サーバーコンポーネントにするため削除
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, ControllerRenderProps } from 'react-hook-form';
-import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { shopFormSchema, ShopForm, Shop } from '@/schemas/shop'; // Shop 型をインポート
-import { useRouter, useParams } from 'next/navigation'; // useParams をインポート
-import { useState, useEffect } from 'react';
-import { MultiImageUploader } from '@/app/(components)/multi-image-uploader';
-import { Skeleton } from '@/components/ui/skeleton';
+// import { zodResolver } from '@hookform/resolvers/zod'; // Form関連は EditShopForm へ移動
+// import { useForm, ControllerRenderProps } from 'react-hook-form'; // Form関連は EditShopForm へ移動
+import { Button } from '@/components/ui/button'; // Button はエラー表示で使う可能性あり
+// Form関連のインポートは EditShopForm へ移動
+// import { Input } from '@/components/ui/input'; // Form関連は EditShopForm へ移動
+// import { Textarea } from '@/components/ui/textarea'; // Form関連は EditShopForm へ移動
+// import { Select, ... } from "@/components/ui/select"; // Form関連は EditShopForm へ移動
+import { Shop } from '@/schemas/shop'; // Shop 型は必要
+import { useRouter, useParams, notFound, redirect } from 'next/navigation'; // notFound, redirect をインポート
+// import { useState, useEffect } from 'react'; // useState, useEffect は EditShopForm へ移動
+import { createClient } from '@/lib/supabase/server'; // ★ サーバー用クライアントをインポート
+// import { MultiImageUploader } from '@/app/(components)/multi-image-uploader'; // Form関連は EditShopForm へ移動
+import { Skeleton } from '@/components/ui/skeleton'; // ローディング表示で使う可能性あり
+import { EditShopForm } from '@/app/(components)/edit-shop-form'; // ★ 作成したフォームコンポーネントをインポート
 
-// Egami/Hirano と Visit のオプションは固定
-const egamiHiranoOptions = [
-  { value: "egami", label: "Egami" },
-  { value: "hirano", label: "Hirano" },
-  { value: "egami-hirano", label: "Egami & Hirano" },
-];
-const visitOptions = [
-  { value: "zumi", label: "Zumi" },
-  { value: "motomu", label: "Motomu" },
-];
+// オプションは EditShopForm へ移動
+// 固定オプションも EditShopForm へ移動
 
 interface OptionsResponse {
   genres: string[];
   areaCategories: string[];
 }
 
-export default function EditShopPage() { // コンポーネント名を変更
-  const router = useRouter();
-  const params = useParams(); // useParams を使用
-  const shopId = params.id as string; // URLから店舗IDを取得
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [options, setOptions] = useState<OptionsResponse | null>(null);
-  const [isLoadingOptions, setIsLoadingOptions] = useState(true);
-  const [isLoadingShop, setIsLoadingShop] = useState(true); // 店舗データのローディング状態
-  const [shopData, setShopData] = useState<Shop | null>(null); // 店舗データ
+// ページコンポーネントの Props 型定義 (Next.js App Router の規約)
+interface EditShopPageProps {
+  params: { id: string };
+}
 
-  // コンポーネントマウント時にAPIからオプションを取得
-  useEffect(() => {
-    const fetchOptions = async () => {
-      setIsLoadingOptions(true);
-      try {
-        const response = await fetch('/api/options');
-        if (!response.ok) {
-          throw new Error('Failed to fetch options');
-        }
-        const data: OptionsResponse = await response.json();
-        setOptions(data);
-      } catch (error) {
-        console.error('Error fetching options:', error);
-        // エラーハンドリング (例: エラーメッセージ表示)
-      } finally {
-        setIsLoadingOptions(false);
-      }
-    };
-    fetchOptions();
-  }, []);
+export default async function EditShopPage({ params }: EditShopPageProps) { // async 関数に変更し、props を受け取る
+  // const router = useRouter(); // クライアントフックは削除
+  const shopId = params.id; // props から取得
+  // useState は削除
 
-  // form の宣言を useEffect の前に移動
-  const form = useForm<ShopForm>({
-    resolver: zodResolver(shopFormSchema),
-    defaultValues: { // defaultValues は useEffect 内で reset するため、空でも良いが、型安全のため初期値を設定
-      name: '',
-      genre: '',
-      area: '',
-      url: '',
-      holiday: '',
-      area_category: '',
-      memo: '',
-      egami_hirano: undefined,
-      visit: undefined,
-      images: [] // 末尾のカンマを削除, 重複キーを削除
+  const supabase = createClient(); // ★ サーバー用クライアントを作成
+
+  // --- 認証チェック ---
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    console.error('[Edit Page] Auth Error or no user, redirecting to login.');
+    redirect('/login'); // 未認証ならリダイレクト
+  }
+  console.log('[Edit Page] User authenticated:', user.id);
+
+  // --- 店舗データ取得 ---
+  let initialShopData: Shop | null = null;
+  let shopFetchError: string | null = null;
+  try {
+    const numericShopId = parseInt(shopId, 10);
+    if (isNaN(numericShopId)) {
+      throw new Error('Invalid Shop ID format');
     }
-  });
 
-  // 店舗データを取得する useEffect
-  useEffect(() => {
-    // form.reset が useEffect の依存配列に含まれているため、
-    // レンダリングごとに form.reset の参照が変わり、無限ループする可能性がある。
-    // useCallback でメモ化するか、依存配列から削除し、手動で呼び出すなどの対策が必要。
-    // ここでは依存配列から form.reset を削除し、shopId の変更時のみ実行するようにする。
-    if (!shopId) return;
+    console.log(`[Edit Page] Fetching shop data for ID: ${numericShopId}`);
+    const { data, error } = await supabase
+      .from('shops')
+      .select('*')
+      .eq('id', numericShopId)
+      // .eq('user_id', user.id) // ★ 必要に応じて自分のデータのみ編集可能にするRLSと組み合わせる
+      .single();
 
-    const fetchShopData = async () => {
-      setIsLoadingShop(true);
-      try {
-        const response = await fetch(`/api/shops/${shopId}`); // パスを /api/shops/ に戻す
-        if (!response.ok) {
-          // 404 Not Found の場合のエラーハンドリングを追加
-          if (response.status === 404) {
-             setSubmitError('指定された店舗が見つかりませんでした。');
-             setShopData(null); // shopData を null に設定
-             return; // これ以上処理を進めない
-          }
-          throw new Error('Failed to fetch shop data');
-        }
-        const data: Shop = await response.json();
-        setShopData(data);
-        // 取得したデータでフォームを初期化 (null を空文字列に変換、型アサーション追加)
-        form.reset({
-          name: data.name,
-          genre: data.genre ?? '',
-          area: data.area ?? '',
-          url: data.url ?? '',
-          holiday: data.holiday ?? '',
-          area_category: data.area_category ?? '',
-          memo: data.memo ?? '',
-          // APIからの値が ShopForm のリテラル型に合致することを保証するため型アサーションを使用
-          egami_hirano: (data.egami_hirano as ShopForm['egami_hirano']) ?? undefined,
-          visit: (data.visit as ShopForm['visit']) ?? undefined,
-          images: data.images ?? [],
-        });
-      } catch (error) {
-        console.error('Error fetching shop data:', error);
-        // fetchShopData 内で発生した一般的なエラー
-        setSubmitError('店舗データの取得中にエラーが発生しました。');
-      } finally {
-        setIsLoadingShop(false);
+    if (error) {
+      if (error.code === 'PGRST116') { // Not Found
+        console.log(`[Edit Page] Shop not found in Supabase for ID: ${numericShopId}`);
+        notFound(); // 404ページを表示
+      } else {
+        throw error; // その他のDBエラー
       }
-    };
-
-    fetchShopData();
-  }, [shopId]); // 依存配列を shopId のみに変更
-
-  // onSubmit 関数を useEffect の後に定義
-  async function onSubmit(values: ShopForm) { // 更新処理
-    setIsSubmitting(true);
-    setSubmitError(null);
-    console.log("Updating shop with values:", values);
-
-    try {
-      const response = await fetch(`/api/shops/${shopId}`, { // パスを /api/shops/ に戻す
-        method: 'PUT', // または PATCH
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || '店舗の更新に失敗しました。'); // メッセージ変更
-      }
-
-      // 更新後トップページへ遷移し、データを再取得してUIを更新
-      router.push('/', { scroll: false }); // スクロール位置を維持して遷移
-      router.refresh(); // サーバーからデータを再取得
-      console.log('店舗が正常に更新されました。'); // メッセージ変更
-
-    } catch (error) {
-      console.error('店舗更新エラー:', error); // メッセージ変更
-      setSubmitError(error instanceof Error ? error.message : '不明なエラーが発生しました。');
-    } finally {
-      setIsSubmitting(false);
     }
+    initialShopData = data;
+    console.log(`[Edit Page] Shop data fetched successfully: ${initialShopData?.name}`);
+  } catch (error) {
+    console.error('[Edit Page] Error fetching shop data:', error);
+    shopFetchError = error instanceof Error ? error.message : '店舗データの取得に失敗しました。';
+    // エラーが発生しても、オプション取得は試みる（あるいはここでnotFound()も検討）
   }
 
-  // データ読み込み中のローディング表示
-  if (isLoadingOptions || isLoadingShop) {
-    return (
-      <div className="container mx-auto px-4 py-8 max-w-2xl space-y-8">
-        <Skeleton className="h-10 w-1/3" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-10 w-24" />
-      </div>
-    );
+  // --- オプションデータ取得 ---
+  let options: OptionsResponse = { genres: [], areaCategories: [] };
+  let optionsFetchError: string | null = null;
+  try {
+    console.log('[Edit Page] Fetching options data...');
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!appUrl) {
+        console.error('[Edit Page] NEXT_PUBLIC_APP_URL is not set.'); // ★ エラーログ変更
+        throw new Error('NEXT_PUBLIC_APP_URL is not set in environment variables.');
+    }
+    // ★ URL結合時のスラッシュ重複を避ける (URLオブジェクトを使うのがより安全)
+    const optionsApiUrl = new URL('/api/options', appUrl).toString();
+    console.log(`[Edit Page] Fetching options from: ${optionsApiUrl}`);
+    const response = await fetch(optionsApiUrl, { cache: 'no-store' });
+    console.log(`[Edit Page] Options fetch response status: ${response.status}`); // ★ ステータスログ追加
+    if (!response.ok) {
+      const errorText = await response.text(); // ★ エラー内容を取得
+      console.error(`[Edit Page] Failed to fetch options. Status: ${response.status}, Body: ${errorText}`); // ★ 詳細エラーログ
+      throw new Error(`Failed to fetch options: ${response.statusText}`);
+    }
+    const fetchedOptions = await response.json(); // ★ 一旦別変数に格納
+    console.log('[Edit Page] Options data fetched successfully:', fetchedOptions); // ★ 取得データログ追加
+    // ★ 取得データが期待する形式か確認 (任意だが推奨)
+    if (fetchedOptions && Array.isArray(fetchedOptions.genres) && Array.isArray(fetchedOptions.areaCategories)) {
+        options = fetchedOptions;
+    } else {
+        console.warn('[Edit Page] Fetched options data is not in the expected format:', fetchedOptions);
+        throw new Error('Fetched options data format is invalid.');
+    }
+  } catch (error) {
+    console.error('[Edit Page] Error fetching options:', error);
+    optionsFetchError = error instanceof Error ? error.message : 'オプションデータの取得に失敗しました。';
+    // オプション取得失敗時のハンドリング（フォームは表示させるが、選択肢は空になる）
   }
 
-  // 店舗データが見つからない場合のエラー表示
-  if (!shopData && !isLoadingShop) {
+
+  // --- エラーハンドリング ---
+  // 店舗データ取得に失敗した場合（404以外）
+  if (shopFetchError && !initialShopData) {
      return (
       <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <h1 className="text-2xl font-bold text-destructive">エラー</h1>
-        <p className="text-muted-foreground">指定された店舗が見つかりませんでした。</p>
-        <Button onClick={() => router.back()} variant="outline" className="mt-4">戻る</Button>
+        <h1 className="text-2xl font-bold text-destructive">データ取得エラー</h1>
+        <p className="text-muted-foreground">{shopFetchError}</p>
+        {/* <Button onClick={() => router.back()} variant="outline" className="mt-4">戻る</Button> */} {/* router.back() は使えない */}
+        <Button asChild variant="outline" className="mt-4"><a href="/">ホームに戻る</a></Button> {/* 代わりにリンク */}
       </div>
     );
   }
 
+  // 店舗データが見つからない場合は notFound() で処理済み
 
+  // --- レンダリング ---
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <h1 className="text-3xl font-bold mb-6">店舗情報編集</h1> {/* タイトル変更 */}
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          {/* 店舗名 */}
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }: { field: ControllerRenderProps<ShopForm, 'name'> }) => (
-              <FormItem>
-                <FormLabel>店舗名 *</FormLabel>
-                <FormControl>
-                  <Input placeholder="例: 美味しいレストラン" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* ジャンル */}
-          <FormField
-            control={form.control}
-            name="genre"
-            render={({ field }: { field: ControllerRenderProps<ShopForm, 'genre'> }) => (
-              <FormItem>
-                <FormLabel>ジャンル</FormLabel>
-                {/* Selectコンポーネントの value を正しく設定 */}
-                <Select onValueChange={field.onChange} value={field.value ?? ''}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="ジャンルを選択" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {isLoadingOptions ? (
-                      <div className="p-2">
-                        <Skeleton className="h-8 w-full" />
-                      </div>
-                    ) : options?.genres && options.genres.length > 0 ? (
-                      options.genres.map((genre) => (
-                        <SelectItem key={genre} value={genre}>
-                          {genre}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <div className="p-2 text-sm text-muted-foreground">オプションが見つかりません</div>
-                    )}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* 最寄駅 */}
-          <FormField
-            control={form.control}
-            name="area"
-            render={({ field }: { field: ControllerRenderProps<ShopForm, 'area'> }) => (
-              <FormItem>
-                <FormLabel>最寄駅</FormLabel>
-                <FormControl>
-                  <Input placeholder="例: 渋谷駅" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* URL */}
-          <FormField
-            control={form.control}
-            name="url"
-            render={({ field }: { field: ControllerRenderProps<ShopForm, 'url'> }) => (
-              <FormItem>
-                <FormLabel>URL</FormLabel>
-                <FormControl>
-                  <Input placeholder="https://example.com" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* 定休日 */}
-          <FormField
-            control={form.control}
-            name="holiday"
-            render={({ field }: { field: ControllerRenderProps<ShopForm, 'holiday'> }) => (
-              <FormItem>
-                <FormLabel>定休日</FormLabel>
-                <FormControl>
-                  <Input placeholder="例: 日曜日、祝日" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* エリアカテゴリ */}
-          <FormField
-            control={form.control}
-            name="area_category"
-            render={({ field }: { field: ControllerRenderProps<ShopForm, 'area_category'> }) => (
-              <FormItem>
-                <FormLabel>エリアカテゴリ</FormLabel>
-                 {/* Selectコンポーネントの value を正しく設定 */}
-                 <Select onValueChange={field.onChange} value={field.value ?? ''}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="エリアカテゴリを選択" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                     {isLoadingOptions ? (
-                      <div className="p-2">
-                        <Skeleton className="h-8 w-full" />
-                      </div>
-                    ) : options?.areaCategories && options.areaCategories.length > 0 ? (
-                      options.areaCategories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <div className="p-2 text-sm text-muted-foreground">オプションが見つかりません</div>
-                    )}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-           {/* メモ */}
-           <FormField
-            control={form.control}
-            name="memo"
-            render={({ field }: { field: ControllerRenderProps<ShopForm, 'memo'> }) => (
-              <FormItem>
-                <FormLabel>メモ</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="お店に関するメモ..."
-                    className="resize-y"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Egami/Hirano */}
-          <FormField
-            control={form.control}
-            name="egami_hirano"
-            render={({ field }: { field: ControllerRenderProps<ShopForm, 'egami_hirano'> }) => (
-              <FormItem>
-                <FormLabel>Egami/Hirano おすすめ</FormLabel>
-                {/* Selectコンポーネントの value を正しく設定 */}
-                <Select onValueChange={field.onChange} value={field.value ?? ''}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="選択してください" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {egamiHiranoOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Visit */}
-          <FormField
-            control={form.control}
-            name="visit"
-            render={({ field }: { field: ControllerRenderProps<ShopForm, 'visit'> }) => (
-              <FormItem>
-                <FormLabel>訪問者</FormLabel>
-                {/* Selectコンポーネントの value を正しく設定 */}
-                <Select onValueChange={field.onChange} value={field.value ?? ''}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="選択してください" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {visitOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* 画像アップロード */}
-          <FormField
-            control={form.control}
-            name="images"
-            render={({ field }: { field: ControllerRenderProps<ShopForm, 'images'> }) => (
-              <FormItem>
-                <FormLabel>画像</FormLabel>
-                <FormControl>
-                  <MultiImageUploader
-                    value={field.value ?? []}
-                    onChange={field.onChange}
-                  />
-                </FormControl>
-                 <FormDescription>
-                  複数の画像ファイルをアップロードできます。
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-
-          {submitError && (
-            <p className="text-sm font-medium text-destructive">{submitError}</p>
-          )}
-
-          {/* disabled 条件に isLoadingShop を追加、ボタンテキスト変更 */}
-          <Button type="submit" disabled={isSubmitting || isLoadingOptions || isLoadingShop}>
-            {isSubmitting ? '更新中...' : '更新する'}
-          </Button>
-        </form>
-      </Form>
+      <h1 className="text-3xl font-bold mb-6">店舗情報編集</h1>
+      {/* オプション取得エラーがあればメッセージ表示 */}
+      {optionsFetchError && (
+         <p className="mb-4 text-sm text-destructive">オプションの取得に失敗しました: {optionsFetchError}</p>
+      )}
+      {/* initialShopData が null でないことを保証 (notFoundで処理されるはずだが念のため) */}
+      {initialShopData && (
+         <EditShopForm
+           shopId={shopId}
+           initialShopData={initialShopData}
+           options={options}
+         />
+      )}
     </div>
   );
 }

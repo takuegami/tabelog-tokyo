@@ -57,12 +57,22 @@ export default function NewShopPage() {
   // コンポーネントマウント時に認証チェックとオプション取得
   useEffect(() => {
     const checkAuthAndFetchOptions = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      console.log('[Auth Check] Running checkAuth in useEffect (new page)...'); // ★ログ追加
+      const { data: { user }, error } = await supabase.auth.getUser(); // ★ error も取得
+      console.log('[Auth Check] getUser result (new page) - User:', user); // ★ログ追加
+      console.log('[Auth Check] getUser result (new page) - Error:', error); // ★ログ追加
+
+      if (error) {
+        console.error('[Auth Check] Error fetching user (new page):', error.message); // ★エラーログ追加
+      }
 
       if (!user) {
+        console.log('[Auth Check] No user found, attempting redirect to /login (new page)...'); // ★ログ追加
         // 未認証の場合はログインページへリダイレクト
         router.push('/login');
         return; // 認証されていない場合は以降の処理を中断
+      } else {
+         console.log('[Auth Check] User found, proceeding (new page).'); // ★ログ追加
       }
 
       // 認証済みの場合のみオプションを取得

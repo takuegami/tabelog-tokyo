@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from 'next'; // Viewportを追加
 import { Inter, Noto_Sans_JP } from 'next/font/google';
 import './globals.css';
-import Header from '@/components/Header'; // 作成したHeaderコンポーネントをインポート
+import { Header } from '@/app/(components)/header'; // ★ 正しいパスに修正し、名前付きインポートに変更
 // import { Providers } from '@/app/(components)/providers'; // Providersコンポーネントが見つからないためコメントアウト
-import { Toaster } from '@/components/ui/sonner'; // Toasterをインポート
+import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils'; // cnユーティリティをインポート
 
 // フォント設定
@@ -58,8 +58,8 @@ export default function RootLayout({
             {children}
           </main>
           {/* TODO: Add Footer */}
-          {/* Toasterコンポーネントを配置 */}
-          <Toaster richColors position="top-right" /> {/* スタイルと位置を指定 */}
+          {/* ★ Toaster を一時的にコメントアウト */}
+          {/* <Toaster richColors position="top-right" /> */}
         {/* </Providers> */} {/* Providersコンポーネントが見つからないためコメントアウト */}
       </body>
     </html>
