@@ -1,61 +1,13 @@
 import * as React from 'react';
-import { Shop, shopsResponseSchema } from '@/schemas/shop'; // Shop 型と shopsResponseSchema をインポート
-import { FilterControls } from '@/app/(components)/filter-controls'; // src/app/(components)/filter-controls.tsx を指すはず
-import { ShopList } from '@/app/(components)/shop-list'; // src/app/(components)/shop-list.tsx を指すはず
-import { SkeletonCard } from '@/app/(components)/skeleton-card'; // src/app/(components)/skeleton-card.tsx を指すはず
+// Shop 型は getAllShopsData が返す型 (DbShop) を使うため、直接インポートは不要になるかも
+// import { Shop, shopsResponseSchema } from '@/schemas/shop';
+import { Shop } from '@/schemas/shop'; // Shop 型は getGenres で必要
+import { FilterControls } from '@/app/(components)/filter-controls';
+import { ShopList } from '@/app/(components)/shop-list';
+import { SkeletonCard } from '@/app/(components)/skeleton-card';
+import { getAllShopsData } from '@/lib/data'; // データ取得関数をインポート
 
-// サーバーサイドでジャンルリストを生成する関数 (data.tsから移動)
-// データ取得関数 (サーバーサイドで実行) - shops/page.tsx と同様
-async function getShops(): Promise<Shop[]> {
-  // 絶対URLを構築 (ローカル/Vercel環境変数から取得)
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'; // ポートを3001に修正 (ローカル環境に合わせて)
-  const apiUrl = `${baseUrl}/api/shops`;
-  console.log(`[getShops] Fetching shops from: ${apiUrl}`); // ログ識別子追加
-  try {
-    const res = await fetch(apiUrl, { cache: 'no-store' });
-    console.log(`[getShops] Fetch response status: ${res.status}`); // ステータスコード確認
-
-    // 生のレスポンスボディを確認
-    const rawBody = await res.text();
-    console.log('[getShops] Raw response body (first 500 chars):', rawBody.substring(0, 500)); // 長い場合は一部表示
-
-    if (!res.ok) {
-      console.error(`[getShops] Failed to fetch shops: ${res.status} ${res.statusText}`, rawBody);
-      return [];
-    }
-
-    // JSON パースを試みる
-    let data;
-    try {
-      data = JSON.parse(rawBody); // 生ボディからパース
-      // パース後のデータ確認 (最初の数件と件数)
-      console.log(`[getShops] Parsed data type: ${typeof data}, isArray: ${Array.isArray(data)}, length: ${Array.isArray(data) ? data.length : 'N/A'}`);
-      if (Array.isArray(data)) {
-          console.log('[getShops] Parsed data (first 2 items):', JSON.stringify(data.slice(0, 2), null, 2));
-      } else {
-          console.log('[getShops] Parsed data (non-array):', JSON.stringify(data, null, 2));
-      }
-    } catch (parseError) {
-      console.error('[getShops] Failed to parse JSON:', parseError, 'Raw body:', rawBody.substring(0, 500));
-      return [];
-    }
-
-    // Zod スキーマで API レスポンスをバリデーション
-    console.log('[getShops] Starting Zod validation...');
-    const validationResult = shopsResponseSchema.safeParse(data);
-    if (!validationResult.success) {
-      console.error('[getShops] Zod validation failed:', validationResult.error.flatten());
-      // バリデーション失敗時のデータもログ出力
-      console.error(`[getShops] Data that failed validation (type: ${typeof data}, isArray: ${Array.isArray(data)}, length: ${Array.isArray(data) ? data.length : 'N/A'}):`, JSON.stringify(Array.isArray(data) ? data.slice(0, 2) : data, null, 2));
-      return [];
-    }
-    console.log('[getShops] Zod validation successful. Returning data count:', validationResult.data.length); // 成功時の件数
-    return validationResult.data;
-  } catch (error) {
-    console.error('[getShops] Error during fetch or processing:', error);
-    return [];
-  }
-}
+// データ取得関数 getShops は不要になったため削除
 
 // サーバーサイドでジャンルリストを生成する関数
 async function getGenres(shops: Shop[]): Promise<string[]> {
@@ -74,8 +26,8 @@ async function getGenres(shops: Shop[]): Promise<string[]> {
 // このページはサーバーサイドでレンダリングされます (SSR or SSG)
 export default async function HomePage() {
   // サーバーサイドで店舗データとジャンルリストを取得
-  const allShops = await getShops(); // APIから取得するように変更
-  const availableGenres = await getGenres(allShops); // APIから取得したデータを使用
+  const allShops = await getAllShopsData(); // 直接関数を呼び出す
+  const availableGenres = await getGenres(allShops); // 取得したデータを使用
 
   return (
     <div className="flex flex-col gap-8">

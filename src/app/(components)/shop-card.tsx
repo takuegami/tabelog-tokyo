@@ -3,8 +3,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { MapPin, Utensils, CalendarDays, Info, Trash2 } from 'lucide-react'; // Trash2 アイコンをインポート
-import { Button } from '@/components/ui/button'; // Button をインポート
+import { MapPin, Utensils, CalendarDays, Info, Trash2, Pencil } from 'lucide-react'; // Pencil アイコンをインポート
+import { Button } from '@/components/ui/button';
 import {
   Carousel,
   CarouselContent,
@@ -59,19 +59,11 @@ export function ShopCard({ shop, index, onDelete }: ShopCardProps) { // onDelete
       custom={index} // staggerの遅延時間をカスタム値として渡す
       whileHover={{ y: -4, transition: { duration: 0.15 } }} // ホバーアニメーション
     >
-      <Card className="relative h-full flex flex-col overflow-hidden transition-shadow hover:shadow-md group p-0"> {/* relative を追加 */}
-        {/* 削除ボタン */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-2 right-2 z-20 h-7 w-7 rounded-full bg-background/70 text-destructive opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-destructive hover:text-destructive-foreground"
-          onClick={handleDeleteClick}
-          aria-label={`店舗 ${shop.name} を削除`}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+      {/* group クラスを Card に移動 */}
+      <Card className="group relative h-full flex flex-col overflow-hidden transition-shadow hover:shadow-md p-0">
+        {/* ボタンは CardFooter に移動するため、ここからは削除 */}
 
-        {/* 画像カルーセル (shop.imagesが存在し、空でない場合のみ表示) - Linkの外に移動 */}
+        {/* 画像カルーセル (変更なし) */}
         {shop.images && shop.images.length > 0 ? (
           <Carousel
               opts={{
@@ -202,16 +194,47 @@ export function ShopCard({ shop, index, onDelete }: ShopCardProps) { // onDelete
             </div>
           </CardContent>
 
-          {/* メモ */}
+          {/* メモ (変更なし) */}
           {shop.memo && shop.memo.trim() !== '' && (
-            <CardFooter className="pt-0 pb-4 text-xs text-muted-foreground border-t mt-auto pt-3 px-4"> {/* paddingを個別に追加 */}
+            <CardFooter className="pt-0 pb-3 text-xs text-muted-foreground border-t mt-auto pt-3 px-4"> {/* padding調整 */}
               <div className="flex items-start gap-1.5">
                 <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
                 <span className="leading-relaxed">{shop.memo}</span>
               </div>
             </CardFooter>
           )}
-        </Link> {/* Linkの閉じタグを移動 */}
+        </Link> {/* Linkの閉じタグ */}
+
+        {/* --- ボタンを配置する CardFooter (スタイル変更) --- */}
+        {/* border-t を削除、padding調整、gap調整 */}
+        <CardFooter className="flex justify-end gap-1 pt-1 pb-2 px-3">
+          {/* 編集ボタン */}
+          <Link
+            href={`/shops/${shop.id}/edit`}
+            passHref
+            legacyBehavior
+          >
+            <Button
+              variant="ghost" // ghost スタイルに変更
+              size="icon"     // アイコンサイズに
+              className="h-7 w-7 text-muted-foreground hover:text-primary" // サイズと色調整
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`店舗 ${shop.name} を編集`}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          </Link>
+          {/* 削除ボタン */}
+          <Button
+            variant="ghost" // ghost スタイルに変更
+            size="icon"     // アイコンサイズに
+            className="h-7 w-7 text-muted-foreground hover:text-destructive" // サイズと色調整
+            onClick={handleDeleteClick}
+            aria-label={`店舗 ${shop.name} を削除`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </CardFooter>
       </Card>
     </motion.div>
   );

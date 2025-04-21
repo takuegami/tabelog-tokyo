@@ -80,7 +80,7 @@ export function ShopList({ initialShops }: ShopListProps) {
   const handleDelete = async (shopId: number) => {
     if (window.confirm('この店舗を削除してもよろしいですか？')) {
       try {
-        const response = await fetch(`/api/shops/${shopId}`, {
+        const response = await fetch(`/api/shops/${shopId}`, { // パスを /api/shops/ に戻す
           method: 'DELETE',
         });
 
