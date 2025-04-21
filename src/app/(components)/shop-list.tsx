@@ -48,18 +48,8 @@ function filterShops(shops: Shop[], params: URLSearchParams): Shop[] {
     return true;
   });
 
-  return filtered.sort((a, b) => {
-    // プロパティ名を egami_hirano に修正
-    const hasEgamiHiranoA =
-      a.egami_hirano && a.egami_hirano.trim() !== '';
-    const hasEgamiHiranoB =
-      b.egami_hirano && b.egami_hirano.trim() !== '';
-    if (hasEgamiHiranoA && !hasEgamiHiranoB) return -1;
-    if (!hasEgamiHiranoA && hasEgamiHiranoB) return 1;
-    const nameA = a.name || '';
-    const nameB = b.name || '';
-    return nameA.localeCompare(nameB, 'ja');
-  });
+  // サーバー側でソート済みのため、そのまま返却
+  return filtered;
 }
 
 export function ShopList({ initialShops }: ShopListProps) {

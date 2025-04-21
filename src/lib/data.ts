@@ -20,8 +20,7 @@ export async function getAllShopsData(): Promise<DbShop[]> {
     // RLSポリシーによっては、ここで認証状態に応じたデータのみが返る
     const { data: supabaseShops, error: supabaseError } = await supabase
       .from('shops')
-      .select('*') // select('*') は1回でOK
-      .order('created_at', { ascending: false });
+      .select('*'); // select('*') は1回でOK
       // .limit(4000); // Supabase 側の設定に任せるためコメントアウトまたは削除
 
     if (supabaseError) {
@@ -42,7 +41,18 @@ export async function getAllShopsData(): Promise<DbShop[]> {
     }
 
     console.log('[getAllShopsData] Successfully fetched data from Supabase. Count:', validationResult.data.length);
-    return validationResult.data; // バリデーション成功時はデータを返す
+    // egami_hirano フラグを優先し、その上で更新日時(updated_at)降順にソート
+    return validationResult.data
+      .slice()
+      .sort((a, b) => {
+        const aPri = ['egami', 'hirano', 'egami-hirano'].includes(a.egami_hirano ?? '');
+        const bPri = ['egami', 'hirano', 'egami-hirano'].includes(b.egami_hirano ?? '');
+        if (aPri && !bPri) return -1;
+        if (!aPri && bPri) return 1;
+        const tA = Date.parse(a.updated_at ?? a.created_at) || 0;
+        const tB = Date.parse(b.updated_at ?? b.created_at) || 0;
+        return tB - tA;
+      });
 
   } catch (err) {
     console.error('Unexpected error in getAllShopsData:', err);

@@ -115,7 +115,10 @@ export async function PUT(
     // JSON 関連の分岐を削除し、Supabase のみ更新
     // --- Supabase のデータを更新 ---
     // validatedData には id, created_at が含まれないため、そのまま updateData として使用
-    const updateData = validatedData;
+    const updateData = {
+      ...validatedData,
+      updated_at: new Date().toISOString()
+    };
     // Supabase に渡す更新データをログ出力
     console.log(`[API PUT /api/shops/${shopId}] Data to update in Supabase:`, JSON.stringify(updateData, null, 2));
 
