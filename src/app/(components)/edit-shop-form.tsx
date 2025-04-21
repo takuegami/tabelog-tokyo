@@ -73,6 +73,7 @@ export function EditShopForm({ shopId, initialShopData, options, redirectUrl }: 
       egami_hirano: (initialShopData.egami_hirano as ShopForm['egami_hirano']) ?? undefined,
       visit: (initialShopData.visit as ShopForm['visit']) ?? undefined,
       images: initialShopData.images ?? [],
+      star: initialShopData.star ?? undefined, // star の初期値を追加
     }
   });
 
@@ -307,6 +308,39 @@ export function EditShopForm({ shopId, initialShopData, options, redirectUrl }: 
                   ))}
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* 星評価 */}
+        <FormField
+          control={form.control}
+          name="star"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>星評価</FormLabel>
+              <Select
+                onValueChange={(value) => field.onChange(value ? parseFloat(value) : undefined)} // 文字列を数値に変換
+                value={field.value !== undefined ? String(field.value) : ''} // 数値を文字列に変換
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="評価を選択" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {/* 0 から 5 まで 0.5 刻みのオプションを生成 */}
+                  {Array.from({ length: 11 }, (_, i) => i * 0.5).map((value) => (
+                    <SelectItem key={value} value={String(value)}>
+                      {value.toFixed(1)} {/* 0.5, 1.0 のように表示 */}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                お店の評価を0.5刻みで選択してください。
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

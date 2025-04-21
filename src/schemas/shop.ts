@@ -12,6 +12,11 @@ export const shopFormSchema = z.object({
   egami_hirano: z.enum(["egami", "hirano", "egami-hirano"], { errorMap: () => ({ message: '選択してください' }) }).optional(),
   visit: z.enum(["zumi", "motomu"], { errorMap: () => ({ message: '選択してください' }) }).optional(), // visit を追加し、enum で "zumi", "motomu" に限定
   images: z.array(z.string().url({ message: '有効な画像URL形式である必要があります' })).optional(), // 複数画像URL用のフィールドを追加
+  star: z.number()
+    .min(0, { message: '0以上の値を入力してください' })
+    .max(5, { message: '5以下の値を入力してください' })
+    .refine((val) => (val * 10) % 5 === 0, { message: '0.5刻みで入力してください' })
+    .optional(), // 星評価を追加
 });
 
 export type ShopForm = z.infer<typeof shopFormSchema>;
@@ -34,6 +39,8 @@ export const dbShopSchema = z.object({
   egami_hirano: z.string().nullable().optional(), // DB側は string のまま
   visit: z.string().nullable().optional(),
   images: z.array(z.string().url()).nullable().optional(),
+  star: z.number().min(0).max(5).nullable().optional(), // DB側にも star を追加 (バリデーションはアプリケーション層で行う想定)
+  updated_at: z.string().optional(), // 最終更新日時を追加 (Supabaseが自動管理)
 });
 
 export type Shop = z.infer<typeof dbShopSchema>;

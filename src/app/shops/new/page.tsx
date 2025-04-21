@@ -108,6 +108,7 @@ export default function NewShopPage() {
       egami_hirano: undefined,
       visit: undefined,
       images: [],
+      star: undefined, // star のデフォルト値を追加
     },
   });
 
@@ -344,7 +345,40 @@ export default function NewShopPage() {
               </FormItem>
             )}
           />
-
+  
+          {/* 星評価 */}
+          <FormField
+            control={form.control}
+            name="star"
+            render={({ field }: { field: ControllerRenderProps<ShopForm, 'star'> }) => ( // 型アサーションを追加
+              <FormItem>
+                <FormLabel>星評価</FormLabel>
+                <Select
+                  onValueChange={(value) => field.onChange(value ? parseFloat(value) : undefined)} // 文字列を数値に変換
+                  value={field.value !== undefined ? String(field.value) : ''} // 数値を文字列に変換
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="評価を選択" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {/* 0 から 5 まで 0.5 刻みのオプションを生成 */}
+                    {Array.from({ length: 11 }, (_, i) => i * 0.5).map((value) => (
+                      <SelectItem key={value} value={String(value)}>
+                        {value.toFixed(1)} {/* 0.5, 1.0 のように表示 */}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  お店の評価を0.5刻みで選択してください。
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+  
           {/* 画像アップロード */}
           <FormField
             control={form.control}

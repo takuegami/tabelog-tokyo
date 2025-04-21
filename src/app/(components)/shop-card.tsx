@@ -5,7 +5,7 @@ import Link from 'next/link'; // Link はテキスト部分で使用
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'; // useRouter, usePathname, useSearchParams をインポート
 import * as React from 'react'; // React と useTransition をインポート
 import { motion } from 'framer-motion';
-import { MapPin, Utensils, CalendarDays, Info, Trash2, Pencil, Loader2 } from 'lucide-react'; // Pencil, Loader2 アイコンをインポート
+import { MapPin, Utensils, CalendarDays, Info, Trash2, Pencil, Loader2, Clock } from 'lucide-react'; // Clock アイコンをインポート
 import { Button } from '@/components/ui/button';
 import {
   Carousel,
@@ -44,6 +44,56 @@ const cardVariants = {
       ease: 'easeOut',
     },
   }),
+};
+
+// 星評価をSVG画像で描画するヘルパー関数
+const renderStars = (rating: number | null | undefined): React.ReactNode => {
+  const validRating = (rating !== null && rating !== undefined && rating >= 0 && rating <= 5) ? rating : 0; // 無効な値は0として扱う
+  const imagePaths: string[] = [];
+  const fullStars = Math.floor(validRating);
+  const hasHalfStar = validRating % 1 !== 0;
+
+  // 満たされた星
+  for (let i = 0; i < fullStars; i++) {
+    imagePaths.push("/images/star_1.svg");
+  }
+
+  // 半分の星
+  if (hasHalfStar) {
+    imagePaths.push("/images/star_05.svg");
+  }
+
+  // 空の星 (または評価なし)
+  const remainingStars = 5 - imagePaths.length;
+  for (let i = 0; i < remainingStars; i++) {
+    imagePaths.push("/images/star_-1.svg");
+  }
+
+  // 評価が 0 の場合はすべて空の星にする (ユーザー指定の 0.0 のルールに合わせる)
+  if (validRating === 0) {
+     for (let i = 0; i < 5; i++) {
+         imagePaths[i] = "/images/star_-1.svg";
+     }
+  }
+
+  return (
+    <div className="flex items-center">
+      {imagePaths.map((src, index) => (
+        <Image
+          key={index}
+          src={src}
+          alt={`星評価 ${index + 1}/5`} // より具体的なaltテキスト
+          width={16} // 適切なサイズを指定
+          height={16}
+          className="h-4 w-4" // Tailwindでサイズを再指定
+        />
+      ))}
+      {/* 評価数値を横に表示 (任意) */}
+      {rating !== null && rating !== undefined && (
+         <span className="ml-1 text-xs font-medium text-amber-600">{rating.toFixed(1)}</span>
+      )}
+    </div>
+  );
 };
 
 export function ShopCard({ shop, index, onDelete }: ShopCardProps) { // onDelete を props から受け取る
@@ -132,19 +182,33 @@ export function ShopCard({ shop, index, onDelete }: ShopCardProps) { // onDelete
         >
           <CardHeader className="pb-3 pt-4 px-4"> {/* paddingを個別に追加 */}
             <div className="flex items-center justify-between gap-2">
-              {/* ジャンル */}
-              <div className="flex items-center gap-1 flex-wrap">
-                <Utensils className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs font-medium text-muted-foreground">
+              {/* ジャンルと星評価 */}
+              <div className="flex items-center gap-2 flex-wrap"> {/* gap-2 に変更 */}
+                {/* ジャンル */}
+                <div className="flex items-center gap-1">
+                  <Utensils className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {shop.is_takemachelin ? (
+                      <Badge variant="destructive" className="text-xs">
+                        タケマシュラン
+                      </Badge>
+                    ) : (
+                      shop.genre || 'ジャンル不明'
+                    )}
+                  </span>
+                </div>
+                {/* 星評価 */}
+                {renderStars(shop.star)}
+              </div>
+              {/* 元のジャンル表示 span は削除 */}
+              {/* <span className="text-xs font-medium text-muted-foreground">
                   {shop.is_takemachelin ? (
                     <Badge variant="destructive" className="text-xs">
                       タケマシュラン
                     </Badge>
                   ) : (
                     shop.genre || 'ジャンル不明'
-                  )}
-                </span>
-              </div>
+                </span> */}
               {/* egami-hirano アイコン */}
               {/* egami-hirano アイコン */}
               <div className="flex items-center gap-1">
@@ -220,9 +284,19 @@ export function ShopCard({ shop, index, onDelete }: ShopCardProps) { // onDelete
           )}
         </Link> {/* Linkの閉じタグ */}
 
-        {/* --- ボタンを配置する CardFooter (スタイル変更) --- */}
-        {/* border-t を削除、padding調整、gap調整 */}
-        <CardFooter className="flex justify-end gap-1 pt-1 pb-2 px-3">
+        {/* --- 最終更新日時とボタンを配置する CardFooter --- */}
+        <CardFooter className="flex justify-between items-center gap-2 pt-2 pb-2 px-3 border-t mt-auto"> {/* 上罫線を追加、左右に要素を配置 */}
+          {/* 最終更新日時 (左寄せ) */}
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span>
+              {shop.updated_at
+                ? `更新: ${new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(shop.updated_at))}`
+                : '更新日不明'}
+            </span>
+          </div>
+          {/* ボタン (右寄せ) */}
+          <div className="flex gap-1">
           {/* 編集ボタン (Linkを削除し、onClickとdisabled, アイコン切り替えを追加) */}
           <Button
             variant="ghost"
@@ -244,6 +318,7 @@ export function ShopCard({ shop, index, onDelete }: ShopCardProps) { // onDelete
           >
             <Trash2 className="h-4 w-4" />
           </Button>
+          </div>
         </CardFooter>
       </Card>
     </motion.div>
