@@ -127,8 +127,28 @@ export default function NewShopPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || '店舗の登録に失敗しました。');
+        let errorMessage = '店舗の登録に失敗しました。'; // デフォルトメッセージ
+        let errorDetails = '';
+        try {
+          const errorData = await response.json();
+          // APIからのエラーメッセージ (error) を優先的に使用
+          errorMessage = errorData.error || errorMessage;
+          // details, code, hint も取得して表示
+          const detailsParts = [
+            errorData.details,
+            errorData.code ? `(Code: ${errorData.code})` : '',
+            errorData.hint ? `Hint: ${errorData.hint}` : '',
+            // ★デバッグ情報を追加
+            errorData.debug_inserted_data ? `\nDebug Data: ${JSON.stringify(errorData.debug_inserted_data)}` : ''
+          ].filter(Boolean); // 空の要素を除去
+          errorDetails = detailsParts.join(' ');
+
+        } catch (jsonError) {
+          // JSONパースに失敗した場合など
+          console.error("Failed to parse error response:", jsonError);
+        }
+        // エラーメッセージと詳細情報（デバッグ情報含む）を結合してエラーをスロー
+        throw new Error(`${errorMessage}${errorDetails ? ` - ${errorDetails}` : ''}`);
       }
 
       router.push('/');

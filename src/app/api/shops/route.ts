@@ -57,28 +57,56 @@ export async function POST(request: NextRequest) {
     // validatedData に images が含まれていないことを確認 (含まれているとDBエラーの可能性)
     // ShopForm スキーマには images がないので問題ないはずだが念のため
     // バリデーション済みデータと images を結合して挿入データを作成
+    // user_id は RLS ポリシーで処理されるため、ここでは含めない
+    // validatedData から必要なフィールドのみを抽出し、dataToInsert を構築
+    // これにより、意図しないフィールド (例: id) が含まれるのを防ぐ
+    const { name, genre, area, url, holiday, area_category, memo, egami_hirano, visit, star } = validatedData;
     const dataToInsert = {
-      ...validatedData,
-      images: images ?? null, // images がなければ null を設定
-      user_id: user.id, // 認証されたユーザーのIDを追加
+      name,
+      genre: genre ?? null, // optional なので null を許容
+      area: area ?? null,
+      url: url === '' ? null : (url ?? null), // 空文字列は null に変換、undefined も null に
+      holiday: holiday ?? null,
+      area_category: area_category ?? null,
+      memo: memo ?? null,
+      egami_hirano: egami_hirano ?? null,
+      visit: visit ?? null,
+      star: star ?? null,
+      images: images ?? null, // 外部から取得した images を設定
+      is_takemachelin: false, // デフォルト値
     };
 
-    console.log('Inserting data to Supabase:', dataToInsert); // 挿入データを確認 (images が含まれているか)
+    // ★ 念のため、dataToInsert から id プロパティを削除 (存在する場合)
+    //    エラーメッセージが pkey 違反を示しているため、意図せず id が含まれている可能性を排除
+    delete (dataToInsert as any).id;
+
+    console.log('Inserting data to Supabase:', dataToInsert); // 挿入データを確認
+
+    // ★ 挿入直前の name と url の値を具体的にログ出力
+    console.log(`Attempting to insert with name: "${dataToInsert.name}", url: "${dataToInsert.url}"`);
 
     // insert 操作は RLS ポリシーによって保護されている
     const { data: newShop, error } = await supabase
       .from('shops')
-      .insert(dataToInsert)
+      .insert(dataToInsert) // 修正された dataToInsert を使用
       .select()
       .single();
 
     if (error) {
-      console.error('Error inserting shop:', error);
+      // エラーオブジェクト全体をログに出力して詳細を確認
+      console.error('Error inserting shop (Full Error Object):', JSON.stringify(error, null, 2));
       // 重複エラーなどの詳細なハンドリングも可能
       if (error.code === '23505') { // PostgreSQL unique violation
-         return NextResponse.json({ error: 'Failed to insert shop', details: 'A shop with this name or URL might already exist.' }, { status: 409 }); // Conflict
+         return NextResponse.json({ error: 'Failed to insert shop', details: 'A shop with this name or URL might already exist.', code: error.code }, { status: 409 }); // Conflict
       }
-      return NextResponse.json({ error: 'Failed to insert shop', details: error.message }, { status: 500 });
+      // エラーメッセージ、コード、ヒント、およびデバッグ用の挿入データを返す
+      return NextResponse.json({
+        error: 'Failed to insert shop',
+        details: error.message,
+        code: error.code, // エラーコードを追加
+        hint: error.hint, // ヒントがあれば追加
+        debug_inserted_data: dataToInsert // ★デバッグ用に挿入しようとしたデータを追加
+      }, { status: 500 });
     }
 
     console.log('Successfully inserted shop:', newShop); // 成功ログ
