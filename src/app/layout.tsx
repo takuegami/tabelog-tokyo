@@ -22,6 +22,10 @@ const notoSansJP = Noto_Sans_JP({
 export const metadata: Metadata = {
   title: 'Table Rec - モダンな飲食店検索',
   description: 'Next.jsとTailwind CSSで構築された飲食店検索アプリケーション',
+  icons: {
+    icon: '/images/icom_square.svg', // 一般的なファビコン
+    apple: '/images/icom_square.svg', // Apple Touch Icon (ブックマーク用)
+  },
   // themeColor: '#14b8a6', // metadataから削除
   // manifest.jsonへのリンクはnext-pwaが自動で挿入することを期待
   // manifest: '/manifest.json', // Metadataオブジェクトでのmanifest指定は標準的ではない
