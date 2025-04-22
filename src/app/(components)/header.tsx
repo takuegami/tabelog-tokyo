@@ -50,7 +50,7 @@ export async function Header() {
                 href="/shops/new"
                 className={cn(buttonVariants({ variant: "default", size: "sm" }))} // ★ buttonVariants を適用
               >
-                新規登録
+                ＋追加
               </Link>
               {/* ログアウトボタン */}
               <form action={signOut}>
